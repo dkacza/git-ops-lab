@@ -46,15 +46,56 @@ Measure the time between killing the pod and reconsiliation of the tool.
 
 ## Application
 A minimal two-service web application used as the deployment target across all three stacks.
+Application is a simple budget manager.
 
 #### Frontend
 nginx serving static content. Calls the backend API and displays the response.
+Proxies `/api/*` requests to the backend service — no CORS configuration required.
 
 #### Backend
-Lightweight HTTP service exposing:
-- `/health` — readiness probe endpoint
-- `/api/data` — returns version and timestamp
+Lightweight HTTP service written in Go exposing:
+- `/health` — readiness and liveness probe endpoint
+- `/api/data` — returns version and timestamp (version and build time injected at build via `-ldflags`)
+- `/api/transactions` — CRUD for budget transactions (in-memory)
+- `/api/limits` — per-category budget limits
+- `/api/categories` — available categories
+- `/api/summary` — computed stats: balance, category breakdown, savings rate, largest expense, overspend alerts
 
-No database. Both services are intentionally minimal to keep build times fast and measurements consistent. Application startup time should not be the differentiating factor — CD tool performance is.
+The application is a **budget tracker**. It was chosen because the backend contains real, non-trivial business logic (aggregation, savings rate, overspend detection) which makes CI unit tests meaningful rather than cosmetic.
+
+No database. State is in-memory and resets on pod restart. Both services are intentionally minimal to keep build times fast and measurements consistent. Application startup time should not be the differentiating factor — CD tool performance is.
 
 Deployment is considered complete when both pods pass their readiness probes.
+
+#### Unit tests
+Business logic lives in `app/backend/calculator.go` and is covered by `app/backend/calculator_test.go` (20 tests). Tests run as part of the Docker build (`go test ./...`) and will be executed by the GitHub Actions CI pipeline.
+
+#### Structure
+```
+app/
+  backend/
+    main.go             — entry point, CORS middleware
+    handlers.go         — HTTP handlers
+    store.go            — thread-safe in-memory state
+    calculator.go       — pure business logic functions
+    calculator_test.go  — unit tests
+    Dockerfile          — multi-stage build; runs tests before producing binary
+  frontend/
+    index.html          — single-page UI
+    app.js              — vanilla JS, no dependencies
+    nginx.conf          — serves static files, proxies /api to backend
+    Dockerfile
+  k8s.yaml              — Namespace, Deployments, Services (namespace: budget-tracker)
+  deploy.sh             — builds images, applies manifests, waits for rollout
+```
+
+#### Running locally on Rancher Desktop
+```bash
+./app/deploy.sh            # uses git short hash as version
+./app/deploy.sh 1.0.0      # explicit version
+```
+Frontend is exposed as a `LoadBalancer` service on port `8080`.
+Backend is `ClusterIP` only — reachable inside the cluster as `http://backend:8080`.
+
+#### Kubernetes namespace
+All resources are deployed to the `budget-tracker` namespace.
