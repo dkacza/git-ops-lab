@@ -1,4 +1,4 @@
-const BACKEND_URL = window.BACKEND_URL || 'http://localhost:8080';
+const BACKEND_URL = window.BACKEND_URL || '';
 
 async function apiFetch(path, options = {}) {
   const res = await fetch(BACKEND_URL + path, options);
