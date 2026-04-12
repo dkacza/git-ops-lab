@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Budget Tracker</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #f0f2f5;
+      color: #1a1a2e;
+      min-height: 100vh;
+    }
+
+    header {
+      background: #1a1a2e;
+      color: #fff;
+      padding: 1rem 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    header h1 { font-size: 1.4rem; font-weight: 600; }
+    header .version { font-size: 0.8rem; opacity: 0.6; }
+
+    main {
+      max-width: 1100px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+      display: grid;
+      gap: 1.5rem;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 1.5rem;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    }
+    .card h2 {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      color: #444;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* Summary stats */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 1rem;
+    }
+    .stat-box {
+      background: #f8f9fb;
+      border-radius: 8px;
+      padding: 1rem;
+      text-align: center;
+    }
+    .stat-label { font-size: 0.75rem; color: #888; margin-bottom: 0.4rem; }
+    .stat-value { font-size: 1.4rem; font-weight: 700; }
+    .positive { color: #16a34a; }
+    .negative { color: #dc2626; }
+
+    /* Category breakdown */
+    .breakdown-row {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.5rem 0;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    .breakdown-row:last-child { border-bottom: none; }
+    .breakdown-cat { flex: 1; font-size: 0.9rem; }
+    .breakdown-amount { font-size: 0.9rem; font-weight: 600; }
+    .over-limit .breakdown-amount { color: #dc2626; }
+    .badge-over {
+      background: #fee2e2;
+      color: #dc2626;
+      font-size: 0.7rem;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+
+    /* Alerts */
+    .alert {
+      background: #fff7ed;
+      border-left: 4px solid #f97316;
+      padding: 0.75rem 1rem;
+      border-radius: 4px;
+      font-size: 0.875rem;
+      margin-bottom: 0.5rem;
+    }
+
+    /* Forms */
+    form { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: flex-end; }
+    .field { display: flex; flex-direction: column; gap: 0.3rem; }
+    .field label { font-size: 0.75rem; color: #666; font-weight: 500; }
+    input, select {
+      padding: 0.5rem 0.75rem;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      background: #fff;
+      height: 38px;
+    }
+    input:focus, select:focus { outline: 2px solid #6366f1; border-color: transparent; }
+    .field input[type="text"] { width: 180px; }
+    .field input[type="number"] { width: 110px; }
+    .field input[type="date"] { width: 145px; }
+    .field select { width: 140px; }
+
+    button[type="submit"] {
+      background: #6366f1;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 0 1.25rem;
+      height: 38px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      font-weight: 500;
+    }
+    button[type="submit"]:hover { background: #4f46e5; }
+
+    /* Table */
+    table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+    th {
+      text-align: left;
+      padding: 0.5rem 0.75rem;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #888;
+      border-bottom: 2px solid #f0f0f0;
+    }
+    td { padding: 0.6rem 0.75rem; border-bottom: 1px solid #f5f5f5; }
+    tr:last-child td { border-bottom: none; }
+
+    .btn-delete {
+      background: none;
+      border: none;
+      color: #ccc;
+      cursor: pointer;
+      font-size: 1rem;
+      padding: 0 0.25rem;
+    }
+    .btn-delete:hover { color: #dc2626; }
+
+    /* Limits */
+    .limit-row {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 0.4rem 0;
+      border-bottom: 1px solid #f5f5f5;
+      font-size: 0.9rem;
+    }
+    .limit-row span:first-child { flex: 1; }
+    .limit-row:last-child { border-bottom: none; }
+
+    .empty { color: #aaa; font-size: 0.875rem; text-align: center; padding: 1rem 0; }
+
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+    @media (max-width: 700px) { .two-col { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Budget Tracker</h1>
+  <span class="version" id="version-label">loading...</span>
+</header>
+
+<main>
+
+  <!-- Summary Stats -->
+  <div class="card">
+    <h2>Summary</h2>
+    <div class="stats-grid">
+      <div class="stat-box">
+        <div class="stat-label">Balance</div>
+        <div class="stat-value positive" id="balance">—</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">Total Income</div>
+        <div class="stat-value positive" id="total-income">—</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">Total Expenses</div>
+        <div class="stat-value negative" id="total-expenses">—</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">Savings Rate</div>
+        <div class="stat-value" id="savings-rate">—</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">Largest Expense</div>
+        <div class="stat-value" style="font-size:1rem" id="largest-expense">—</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Overspend Alerts -->
+  <div id="overspend-alerts"></div>
+
+  <!-- Add Transaction -->
+  <div class="card">
+    <h2>Add Transaction</h2>
+    <form id="transaction-form">
+      <div class="field">
+        <label>Description</label>
+        <input type="text" name="description" placeholder="e.g. Rent" required />
+      </div>
+      <div class="field">
+        <label>Amount</label>
+        <input type="number" name="amount" min="0.01" step="0.01" placeholder="0.00" required />
+      </div>
+      <div class="field">
+        <label>Category</label>
+        <select name="category" class="category-select" required></select>
+      </div>
+      <div class="field">
+        <label>Type</label>
+        <select name="type" required>
+          <option value="expense">Expense</option>
+          <option value="income">Income</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Date</label>
+        <input type="date" name="date" id="date" required />
+      </div>
+      <button type="submit">Add</button>
+    </form>
+  </div>
+
+  <!-- Transactions + Breakdown -->
+  <div class="two-col">
+
+    <div class="card">
+      <h2>Transactions</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Description</th>
+            <th>Category</th>
+            <th>Amount</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="transactions-body"></tbody>
+      </table>
+    </div>
+
+    <div>
+      <!-- Category Breakdown -->
+      <div class="card" style="margin-bottom:1.5rem">
+        <h2>Expenses by Category</h2>
+        <div id="category-breakdown"></div>
+      </div>
+
+      <!-- Budget Limits -->
+      <div class="card">
+        <h2>Budget Limits</h2>
+        <form id="limit-form" style="margin-bottom:1rem">
+          <div class="field">
+            <label>Category</label>
+            <select name="limitCategory" class="category-select" required></select>
+          </div>
+          <div class="field">
+            <label>Limit</label>
+            <input type="number" name="limitAmount" min="0" step="0.01" placeholder="0.00" required />
+          </div>
+          <button type="submit">Set</button>
+        </form>
+        <div id="limits-list"></div>
+      </div>
+    </div>
+
+  </div>
+
+</main>
+
+<script src="app.js"></script>
+<script>
+  fetch((window.BACKEND_URL || 'http://localhost:8080') + '/api/data')
+    .then(r => r.json())
+    .then(d => {
+      document.getElementById('version-label').textContent = `v${d.version} · ${d.buildTime}`;
+    })
+    .catch(() => {
+      document.getElementById('version-label').textContent = 'backend unreachable';
+    });
+</script>
+
+</body>
+</html>
