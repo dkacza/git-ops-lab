@@ -43,3 +43,18 @@ Describe steps and structure of each configuration approach.
 #### Failure recovery
 Measure the time between killing the pod and reconsiliation of the tool.
 
+
+## Application
+A minimal two-service web application used as the deployment target across all three stacks.
+
+#### Frontend
+nginx serving static content. Calls the backend API and displays the response.
+
+#### Backend
+Lightweight HTTP service exposing:
+- `/health` — readiness probe endpoint
+- `/api/data` — returns version and timestamp
+
+No database. Both services are intentionally minimal to keep build times fast and measurements consistent. Application startup time should not be the differentiating factor — CD tool performance is.
+
+Deployment is considered complete when both pods pass their readiness probes.
