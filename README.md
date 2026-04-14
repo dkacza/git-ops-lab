@@ -110,3 +110,8 @@ Images are published to GHCR (`ghcr.io/dkacza/budget-tracker-backend`, `ghcr.io/
 
 #### Jenkins stack
 - [ ] Not started
+
+
+### Software Versions:
+- Rancher: 1.22
+- ArgoCD: 3.3.6
