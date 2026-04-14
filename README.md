@@ -68,34 +68,45 @@ No database. State is in-memory and resets on pod restart. Both services are int
 Deployment is considered complete when both pods pass their readiness probes.
 
 #### Unit tests
-Business logic lives in `app/backend/calculator.go` and is covered by `app/backend/calculator_test.go` (20 tests). Tests run as part of the Docker build (`go test ./...`) and will be executed by the GitHub Actions CI pipeline.
+Business logic lives in `backend/calculator.go` and is covered by `backend/calculator_test.go` (20 tests). Tests run as part of the Docker build (`go test ./...`) and will be executed by the GitHub Actions CI pipeline.
 
-#### Structure
-```
-app/
-  backend/
-    main.go             — entry point, CORS middleware
-    handlers.go         — HTTP handlers
-    store.go            — thread-safe in-memory state
-    calculator.go       — pure business logic functions
-    calculator_test.go  — unit tests
-    Dockerfile          — multi-stage build; runs tests before producing binary
-  frontend/
-    index.html          — single-page UI
-    app.js              — vanilla JS, no dependencies
-    nginx.conf          — serves static files, proxies /api to backend
-    Dockerfile
-  k8s.yaml              — Namespace, Deployments, Services (namespace: budget-tracker)
-  deploy.sh             — builds images, applies manifests, waits for rollout
-```
-
-#### Running locally on Rancher Desktop
-```bash
-./app/deploy.sh            # uses git short hash as version
-./app/deploy.sh 1.0.0      # explicit version
-```
-Frontend is exposed as a `LoadBalancer` service on port `8080`.
-Backend is `ClusterIP` only — reachable inside the cluster as `http://backend:8080`.
+Application source code available at: https://github.com/dkacza/budget-tracker
 
 #### Kubernetes namespace
 All resources are deployed to the `budget-tracker` namespace.
+
+## Repository structure
+
+This lab uses a two-repo GitOps setup:
+
+**`git-ops-lab`** (this repo) — config repo; the desired cluster state that CD tools reconcile against.
+```
+argo-cd/
+  manifests/              — Kubernetes manifests watched by Argo CD
+    namespace.yaml
+    backend-deployment.yaml
+    backend-service.yaml
+    frontend-deployment.yaml
+    frontend-service.yaml
+flux/
+  manifests/              — Kubernetes manifests watched by Flux (planned)
+```
+
+**`budget-tracker`** — application source code, Dockerfiles, GitHub Actions CI pipelines.
+
+Images are published to GHCR (`ghcr.io/dkacza/budget-tracker-backend`, `ghcr.io/dkacza/budget-tracker-frontend`). On each CI run the image tag in the relevant `manifests/` directory is updated and committed here, triggering the CD tool to sync.
+
+## Progress
+
+#### Argo CD stack
+- [x] Config repo structure created (`argo-cd/manifests/`)
+- [x] Kubernetes manifests prepared for GHCR images
+- [ ] Argo CD installed on cluster
+- [ ] Argo CD Application CRD configured
+- [ ] GitHub Actions CI pipeline wired up
+
+#### Flux stack
+- [ ] Not started
+
+#### Jenkins stack
+- [ ] Not started
