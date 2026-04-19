@@ -5,6 +5,7 @@ metadata:
   namespace: budget-tracker
 spec:
   replicas: 1
+  revisonHistoryLimit: 2
   selector:
     matchLabels:
       app: backend
