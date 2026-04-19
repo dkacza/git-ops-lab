@@ -82,6 +82,8 @@ This lab uses a two-repo GitOps setup:
 **`git-ops-lab`** (this repo) — config repo; the desired cluster state that CD tools reconcile against.
 ```
 argo-cd/
+  installation.md         — step-by-step Argo CD setup guide
+  application.yaml        — Argo CD Application CRD
   manifests/              — Kubernetes manifests watched by Argo CD
     namespace.yaml
     backend-deployment.yaml
@@ -101,9 +103,9 @@ Images are published to GHCR (`ghcr.io/dkacza/budget-tracker-backend`, `ghcr.io/
 #### Argo CD stack
 - [x] Config repo structure created (`argo-cd/manifests/`)
 - [x] Kubernetes manifests prepared for GHCR images
-- [ ] Argo CD installed on cluster
-- [ ] Argo CD Application CRD configured
-- [ ] GitHub Actions CI pipeline wired up
+- [x] Argo CD installed on cluster
+- [x] Argo CD Application CRD configured
+- [x] GitHub Actions CI pipeline wired up
 
 #### Flux stack
 - [ ] Not started
