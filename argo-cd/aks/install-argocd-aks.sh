@@ -41,6 +41,14 @@ while [ -z "$EXTERNAL_IP" ]; do
 done
 echo "    External IP: $EXTERNAL_IP"
 
+echo "==> Generating webhook secret..."
+SECRET=$(openssl rand -hex 32)
+echo "$SECRET" > "$SCRIPT_DIR/../argo-cd-webhook-secret.txt"
+echo "==> Webhook secret saved to $SCRIPT_DIR/../argo-cd-webhook-secret.txt"
+kubectl patch secret argocd-secret -n argocd \
+  --type merge \
+  -p "{\"stringData\": {\"webhook.github.secret\": \"$SECRET\"}}"
+
 echo "==> Applying Application CRD..."
 kubectl apply -f "$SCRIPT_DIR/../application.yaml"
 
@@ -56,6 +64,8 @@ echo "==> Argo CD is ready"
 echo "    UI:           https://$EXTERNAL_IP"
 echo "    Webhook URL:  https://$EXTERNAL_IP/api/webhook"
 echo ""
-echo "    Register the webhook URL in GitHub:"
+echo "    Register the webhook in GitHub:"
 echo "    Settings -> Webhooks -> Add webhook"
+echo "    Payload URL:  https://$EXTERNAL_IP/api/webhook"
 echo "    Content type: application/json"
+echo "    Secret:       $(cat "$SCRIPT_DIR/../argo-cd-webhook-secret.txt")"

@@ -5,6 +5,8 @@
 ./provision.aks.sh
 ./install-argcd-aks.sh <ARGO_CD_STATIC_IP>
 
+<Register or reconfigure the webhook>
+
 # Full teardown
 ./deprovision-aks.sh
 ```
@@ -75,3 +77,13 @@ For installing Argo CD use the `install-argocd-aks.sh` script. It uses the same 
 
 The only difference is that the static IP needs to be provided as a parameter.
 
+## Registering the GitHub Webhook
+
+The install script prints all required values at the end. Use them to register the webhook in GitHub:
+
+1. Go to the `git-ops-lab` repository → **Settings → Webhooks → Add webhook**
+2. Set **Payload URL** to `https://<static-ip>/api/webhook`
+3. Set **Content type** to `application/json`
+4. Set **Secret** to the value from `argo-cd/argo-cd-webhook-secret.txt`
+5. Under events, select **Just the push event**
+6. Ensure **Active** is checked and save
