@@ -14,6 +14,7 @@ spec:
     namespace: budget-tracker
   syncPolicy:
     automated:
-      enabled: false
+      prune: true
+      selfHeal: true
     syncOptions:
       - CreateNamespace=true
