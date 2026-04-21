@@ -18,11 +18,10 @@ GitHub Actions
 Jenkins	Push (traditional)
 
 ## Setup
-Single-node AKS cluster on Azure (Standard_B2as_v2).
+Local Rancher Desktop single node cluster.
 Each setup runs on a plain restored cluster.
-Cluster provisioning and teardown commands are in `aks/instructions.md`.
 
-Running on single node is a constraint. We cannot test the node-failover scenarios. This has to be presented as a boundary of the research and an idea for future expansion.
+Running on single node is a constraint. We cannot test the node-failover scenarios. This has to be presented as a boundary of the reasearch and an idea for future expansion.
 
 ## Measured metrics
 Some metrics cannot be measured the same accross the pull and push based setups which should highlight the advantages of the specific approach.
@@ -83,6 +82,7 @@ This lab uses a two-repo GitOps setup:
 **`git-ops-lab`** (this repo) — config repo; the desired cluster state that CD tools reconcile against.
 ```
 argo-cd/
+  installation.md         — step-by-step Argo CD setup guide
   application.yaml        — Argo CD Application CRD
   manifests/              — Kubernetes manifests watched by Argo CD
     namespace.yaml
@@ -90,18 +90,8 @@ argo-cd/
     backend-service.yaml
     frontend-deployment.yaml
     frontend-service.yaml
-  aks/
-    instructions.md         — AKS cluster setup guide
-    provision-aks.sh        — provisions AKS cluster and static public IP
-    deprovision-aks.sh      — tears down the resource group and all resources
-    install-argocd-aks.sh   — installs Argo CD on AKS with static IP + webhook
-  local/
-    instructions.md         — local cluster setup guide
-    install-argo-local.sh   — installs Argo CD on local cluster with port-forward
 flux/
   manifests/              — Kubernetes manifests watched by Flux (planned)
-old/
-  README-rancher.md       — original README from the local Rancher Desktop setup
 ```
 
 **`budget-tracker`** — application source code, Dockerfiles, GitHub Actions CI pipelines.
@@ -111,15 +101,14 @@ Images are published to GHCR (`ghcr.io/dkacza/budget-tracker-backend`, `ghcr.io/
 ## Progress
 
 #### Argo CD stack
-For ArgoCD setup refer to `argo-cd/aks/instructions.md`
+For ArgoCD setup refer to `argo-cd/installation.md`
 
 - [x] Config repo structure created (`argo-cd/manifests/`)
 - [x] Kubernetes manifests prepared for GHCR images
-- [x] Argo CD installed on AKS cluster
+- [x] Argo CD installed on cluster
 - [x] Argo CD Application CRD configured
 - [x] GitHub Actions CI pipeline wired up
 - [x] Automated installation script
-- [x] Static public IP + GitHub webhook configured
 
 #### Flux stack
 - [ ] Not started
@@ -129,11 +118,11 @@ For ArgoCD setup refer to `argo-cd/aks/instructions.md`
 
 
 ### Software Versions:
-- AKS: 1.31
+- Rancher: 1.22
 - ArgoCD: 3.3.6
 
-### Constraints
-- Single-node cluster — node-failover scenarios are out of scope
-
-## Change Log
-*21.04.2026* - Due to the fact that the webhooks are not available on the local environment switch to Azure AKS has been made.
+### Local Limitations
+Running in local cluster results in several limitations:
+- Testing sinlgle node setup
+- No GitHub Actions webhooks can be implemented.
+- In order to guarantee relevant metrics synchronisation must be triggered manually.
