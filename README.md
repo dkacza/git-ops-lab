@@ -106,6 +106,7 @@ Images are published to GHCR (`ghcr.io/dkacza/budget-tracker-backend`, `ghcr.io/
 - [x] Argo CD installed on cluster
 - [x] Argo CD Application CRD configured
 - [x] GitHub Actions CI pipeline wired up
+- [x] Automated installation script
 
 #### Flux stack
 - [ ] Not started
@@ -117,3 +118,9 @@ Images are published to GHCR (`ghcr.io/dkacza/budget-tracker-backend`, `ghcr.io/
 ### Software Versions:
 - Rancher: 1.22
 - ArgoCD: 3.3.6
+
+### Local Limitations
+Running in local cluster results in several limitations:
+- Testing sinlgle node setup
+- No GitHub Actions webhooks can be implemented.
+- In order to guarantee relevant metrics synchronisation must be triggered manually.

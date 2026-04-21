@@ -1,3 +1,21 @@
+# Automatic installation
+```shell
+cd argo-cd
+./install.sh
+argocd app sync budget-tracker
+```
+
+`install.sh` script automates the steps listed in the section below.
+- Install argocd to the locally running cluster
+- Apply application CRD
+- Run port forward in the background
+- Login to CLI
+
+
+After the installation script finishes, the syncronisation can be triggered.
+
+# Manual installation
+
 Create ArgoCD namespace:
 ```shell
 kubectl create namespace argocd
