@@ -28,8 +28,6 @@ Running on single node is a constraint. We cannot test the node-failover scenari
 Some metrics cannot be measured the same accross the pull and push based setups which should highlight the advantages of the specific approach.
 #### End to end deployment
 Measure the time between the commit and the finish of the pod startup.
-#### Synchronisation latency
-Measure the time between the commit and the detection of state change by the tool.
 #### Self healing latency
 Measure the time between the `kubectl edit` and reversion of the configuration drift.
 #### Rollback time 
@@ -135,7 +133,6 @@ For ArgoCD setup refer to `argo-cd/aks/instructions.md`
 #### Measurement scripts
 - [x] E2E deployment — `measure_cd.sh`: git-ops-lab commit → pods ready (CD latency)
 - [x] E2E deployment — `measure_e2e.sh`: app repo commit → pods ready (full pipeline latency)
-- [ ] Synchronisation latency
 - [ ] Self-healing latency
 - [ ] Rollback time
 - [ ] Failed deployment detection time
@@ -151,4 +148,5 @@ For ArgoCD setup refer to `argo-cd/aks/instructions.md`
 - Single-node cluster — node-failover scenarios are out of scope
 
 ## Change Log
+*22.04.2026* - Synchronisation latency metric scrapped. With webhooks configured on both pull-based stacks, the measured value reflects GitHub's webhook delivery latency (network round-trip to AKS Poland Central), not CD tool behaviour. Argo CD and Flux would produce near-identical results with no tool-attributable signal. To be noted in the thesis as a qualitative observation: pull-based tools achieve near-instantaneous detection when webhooks are configured.
 *21.04.2026* - Due to the fact that the webhooks are not available on the local environment switch to Azure AKS has been made.
