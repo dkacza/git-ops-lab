@@ -1,0 +1,11 @@
+run,timestamp_utc,from_tag,to_tag,duration_seconds
+1,2026-04-22T12:09:48Z,sha-00c452c,sha-ee9dff6,11
+2,2026-04-22T12:10:35Z,sha-ee9dff6,sha-00c452c,10
+3,2026-04-22T12:10:51Z,sha-00c452c,sha-ee9dff6,9
+4,2026-04-22T12:11:10Z,sha-ee9dff6,sha-00c452c,14
+5,2026-04-22T12:11:28Z,sha-00c452c,sha-ee9dff6,14
+6,2026-04-22T12:11:43Z,sha-ee9dff6,sha-00c452c,10
+7,2026-04-22T12:18:49Z,sha-00c452c,sha-ee9dff6,14
+8,2026-04-22T12:19:28Z,sha-ee9dff6,sha-00c452c,13
+9,2026-04-22T12:19:42Z,sha-00c452c,sha-ee9dff6,8
+10,2026-04-22T12:20:01Z,sha-ee9dff6,sha-00c452c,8

@@ -100,6 +100,11 @@ argo-cd/
     install-argo-local.sh   — installs Argo CD on local cluster with port-forward
 flux/
   manifests/              — Kubernetes manifests watched by Flux (planned)
+measurements/
+  e2e-deployment/
+    measure_cd.sh           — measures CD latency: git-ops-lab commit → pods ready
+    measure_e2e.sh          — measures full E2E latency: app repo commit → pods ready
+    results/                — CSV output, one file per day per stack
 old/
   README-rancher.md       — original README from the local Rancher Desktop setup
 ```
@@ -126,6 +131,16 @@ For ArgoCD setup refer to `argo-cd/aks/instructions.md`
 
 #### Jenkins stack
 - [ ] Not started
+
+#### Measurement scripts
+- [x] E2E deployment — `measure_cd.sh`: git-ops-lab commit → pods ready (CD latency)
+- [x] E2E deployment — `measure_e2e.sh`: app repo commit → pods ready (full pipeline latency)
+- [ ] Synchronisation latency
+- [ ] Self-healing latency
+- [ ] Rollback time
+- [ ] Failed deployment detection time
+- [ ] Resource consumption
+- [ ] Failure recovery
 
 
 ### Software Versions:
