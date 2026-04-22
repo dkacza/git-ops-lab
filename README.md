@@ -103,6 +103,9 @@ measurements/
     measure_cd.sh           — measures CD latency: git-ops-lab commit → pods ready
     measure_e2e.sh          — measures full E2E latency: app repo commit → pods ready
     results/                — CSV output, one file per day per stack
+  self-healing/
+    measure_self_healing.sh — introduces replica drift on backend, measures reaction and recovery time
+    results/                — CSV output, one file per day per stack
 old/
   README-rancher.md       — original README from the local Rancher Desktop setup
 ```
@@ -133,7 +136,8 @@ For ArgoCD setup refer to `argo-cd/aks/instructions.md`
 #### Measurement scripts
 - [x] E2E deployment — `measure_cd.sh`: git-ops-lab commit → pods ready (CD latency)
 - [x] E2E deployment — `measure_e2e.sh`: app repo commit → pods ready (full pipeline latency)
-- [ ] Self-healing latency
+- [x] Self-healing latency — `measure_self_healing.sh`: replica drift on backend → reaction and recovery time
+- [ ] Rollback time
 - [ ] Rollback time
 - [ ] Failed deployment detection time
 - [ ] Resource consumption
