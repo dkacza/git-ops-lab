@@ -24,20 +24,34 @@ Cluster provisioning and teardown commands are in `aks/instructions.md`.
 
 Running on single node is a constraint. We cannot test the node-failover scenarios. This has to be presented as a boundary of the research and an idea for future expansion.
 
-## Measured metrics
-Some metrics cannot be measured the same accross the pull and push based setups which should highlight the advantages of the specific approach.
-#### End to end deployment
-Measure the time between the commit and the finish of the pod startup.
-#### Self healing latency
-Measure the time between the `kubectl edit` and reversion of the configuration drift.
-#### Resource consumption
-Measure CPU and Memory footprint of both tools.
-#### Operational complexity
-Describe steps and structure of each configuration approach. 
-*Not a quantitive result, however it's still worth considering in the thesis*
-#### Failure recovery
-Measure the time between killing the pod and reconsiliation of the tool.
 
+## Compared Characteristics
+
+All characteristics compared across the three stacks. Quantitative ones are backed by measurement scripts; qualitative ones serve as descriptive differentiators in the thesis.
+
+#### End-to-end deployment time *(quantitative)*
+Time from a git commit to both application pods passing their readiness probes. The CI phase is identical across all stacks (same GitHub Actions workflow); differences are attributable to the CD tool. Measured in two variants: CD latency (git-ops-lab commit → pods ready) and full E2E latency (app repo commit → pods ready).
+
+#### Self-healing latency *(quantitative — pull-based only)*
+Time for the CD tool to detect and revert a configuration drift introduced directly on the cluster. Pull-based tools (Argo CD, Flux) reconcile continuously against the git state. Jenkins has no equivalent — drift is not detected or corrected without a manual pipeline re-run.
+
+#### Resource consumption *(quantitative)*
+CPU and memory footprint of the CD tool sampled at 250ms intervals across three scenarios: idle, active sync, and self-healing. Jenkins carries a significantly larger baseline footprint due to the JVM.
+
+#### Failure recovery *(quantitative)*
+Time for the CD tool to recover after all its pods are deleted. All tools are deployed as Kubernetes-native workloads, so pod restart is handled by the scheduler; the measured value reflects container startup and initialisation time.
+
+#### Synchronisation latency *(qualitative)*
+With webhooks configured, pull-based tools (Argo CD, Flux) detect git changes near-instantaneously — the latency is GitHub webhook delivery time, not tool behaviour. Without webhooks they fall back to polling (Argo CD default: 3 min, Flux default: 1 min). Jenkins is push-based and triggers immediately on git push regardless of webhook configuration. Not measured quantitatively as the value would reflect network round-trip to the AKS cluster, not the CD tool itself.
+
+#### Rollback process *(qualitative)*
+GitOps rollback is a `git revert` commit — auditable, PR-reviewable, and processed by the CD tool identically to any other commit. Jenkins rollback requires re-triggering the full CI pipeline with a previous artifact version; there is no built-in audit trail and the pipeline must be written to support it explicitly.
+
+#### Failed deployment detection *(qualitative)*
+Pull-based tools automatically surface deployment failures (e.g. bad image tag → `ImagePullBackOff` → `Degraded` health status) in their dashboards without any pipeline changes. Jenkins requires explicit post-deploy verification steps in the pipeline; failures are only visible if the pipeline checks for them. Not measured quantitatively as the detection time is determined by Kubernetes's `progressDeadlineSeconds` parameter, not the CD tool.
+
+#### Operational complexity *(qualitative)*
+Described in terms of configuration steps, required credentials, and cluster access model. Pull-based tools operate entirely from within the cluster and require only read access to the git repository — no inbound credentials need to be stored in the CI system. Jenkins requires cluster credentials (kubeconfig or service account token) to be stored in the CI environment, widening the secret surface area.
 
 ## Application
 A minimal two-service web application used as the deployment target across all three stacks.
@@ -106,6 +120,9 @@ measurements/
     measure_resources.sh    — samples kubectl top for all Argo CD pods at 250ms interval
     render_graph.py         — renders aggregated CPU and memory graph from CSV
     results/                — CSV and PNG output, overwritten on each run
+  failure-recovery/
+    measure_failure_recovery.sh — kills all Argo CD pods, measures time until all are Ready again
+    results/                — CSV output, one file per day per stack
 old/
   README-rancher.md       — original README from the local Rancher Desktop setup
 ```
@@ -138,7 +155,7 @@ For ArgoCD setup refer to `argo-cd/aks/instructions.md`
 - [x] E2E deployment — `measure_e2e.sh`: app repo commit → pods ready (full pipeline latency)
 - [x] Self-healing latency — `measure_self_healing.sh`: replica drift on backend → reaction and recovery time
 - [x] Resource consumption — `measure_resources.sh`: samples all Argo CD pods at 250ms; `render_graph.py`: aggregated CPU/memory graph
-- [ ] Failure recovery
+- [x] Failure recovery — `measure_failure_recovery.sh`: kills all Argo CD pods, measures time until all are Ready again
 
 
 ### Software Versions:
