@@ -6,6 +6,7 @@ metadata:
 spec:
   replicas: 1
   revisionHistoryLimit: 2
+  progressDeadlineSeconds: 60
   selector:
     matchLabels:
       app: backend
@@ -16,7 +17,7 @@ spec:
     spec:
       containers:
         - name: backend
-          image: ghcr.io/dkacza/budget-tracker-backend:sha-badbeef000
+          image: ghcr.io/dkacza/budget-tracker-backend:sha-418bf18
           imagePullPolicy: Always
           ports:
             - containerPort: 8080
