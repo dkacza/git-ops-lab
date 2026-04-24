@@ -102,6 +102,10 @@ measurements/
   self-healing/
     measure_self_healing.sh — introduces replica drift on backend, measures reaction and recovery time
     results/                — CSV output, one file per day per stack
+  resource-consumption/
+    measure_resources.sh    — samples kubectl top for all Argo CD pods at 250ms interval
+    render_graph.py         — renders aggregated CPU and memory graph from CSV
+    results/                — CSV and PNG output, overwritten on each run
 old/
   README-rancher.md       — original README from the local Rancher Desktop setup
 ```
@@ -133,7 +137,7 @@ For ArgoCD setup refer to `argo-cd/aks/instructions.md`
 - [x] E2E deployment — `measure_cd.sh`: git-ops-lab commit → pods ready (CD latency)
 - [x] E2E deployment — `measure_e2e.sh`: app repo commit → pods ready (full pipeline latency)
 - [x] Self-healing latency — `measure_self_healing.sh`: replica drift on backend → reaction and recovery time
-- [ ] Resource consumption
+- [x] Resource consumption — `measure_resources.sh`: samples all Argo CD pods at 250ms; `render_graph.py`: aggregated CPU/memory graph
 - [ ] Failure recovery
 
 
