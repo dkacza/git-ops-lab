@@ -30,8 +30,6 @@ Some metrics cannot be measured the same accross the pull and push based setups 
 Measure the time between the commit and the finish of the pod startup.
 #### Self healing latency
 Measure the time between the `kubectl edit` and reversion of the configuration drift.
-#### Failed deployment detection time
-Measure the time after which the tool will detect that the deployment failed.
 #### Resource consumption
 Measure CPU and Memory footprint of both tools.
 #### Operational complexity
@@ -135,7 +133,6 @@ For ArgoCD setup refer to `argo-cd/aks/instructions.md`
 - [x] E2E deployment — `measure_cd.sh`: git-ops-lab commit → pods ready (CD latency)
 - [x] E2E deployment — `measure_e2e.sh`: app repo commit → pods ready (full pipeline latency)
 - [x] Self-healing latency — `measure_self_healing.sh`: replica drift on backend → reaction and recovery time
-- [ ] Failed deployment detection time
 - [ ] Resource consumption
 - [ ] Failure recovery
 
@@ -148,6 +145,7 @@ For ArgoCD setup refer to `argo-cd/aks/instructions.md`
 - Single-node cluster — node-failover scenarios are out of scope
 
 ## Change Log
-*22.04.2026* - Rollback time metric scrapped. Via git revert the measurement is structurally identical to the E2E CD latency already captured by `measure_cd.sh` — both are a git-ops-lab commit followed by Argo CD sync and pod rollover. The only meaningfully different rollback path (Argo CD native `argocd app rollback`) is not comparable across stacks. The thesis will treat rollback as a qualitative process difference: GitOps rollback is a git revert (auditable, PR-reviewable), Jenkins rollback requires re-triggering the full CI pipeline.
-*22.04.2026* - Synchronisation latency metric scrapped. With webhooks configured on both pull-based stacks, the measured value reflects GitHub's webhook delivery latency (network round-trip to AKS Poland Central), not CD tool behaviour. Argo CD and Flux would produce near-identical results with no tool-attributable signal. To be noted in the thesis as a qualitative observation: pull-based tools achieve near-instantaneous detection when webhooks are configured.
-*21.04.2026* - Due to the fact that the webhooks are not available on the local environment switch to Azure AKS has been made.
+- *24.04.2026* - Failed deployment detection time metric scrapped. Argo CD's `Degraded` health status for a failed rollout is derived directly from Kubernetes's `ProgressDeadlineExceeded` condition, which fires after `progressDeadlineSeconds`. The measured value would equal that parameter regardless of which GitOps tool is used — it is not attributable to the CD tool. The qualitative difference (GitOps tools surface failures automatically; Jenkins requires explicit post-deploy verification in the pipeline) will be noted in the thesis without a latency measurement.
+- *22.04.2026* - Rollback time metric scrapped. Via git revert the measurement is structurally identical to the E2E CD latency already captured by `measure_cd.sh` — both are a git-ops-lab commit followed by Argo CD sync and pod rollover. The only meaningfully different rollback path (Argo CD native `argocd app rollback`) is not comparable across stacks. The thesis will treat rollback as a qualitative process difference: GitOps rollback is a git revert (auditable, PR-reviewable), Jenkins rollback requires re-triggering the full CI pipeline.
+- *22.04.2026* - Synchronisation latency metric scrapped. With webhooks configured on both pull-based stacks, the measured value reflects GitHub's webhook delivery latency (network round-trip to AKS Poland Central), not CD tool behaviour. Argo CD and Flux would produce near-identical results with no tool-attributable signal. To be noted in the thesis as a qualitative observation: pull-based tools achieve near-instantaneous detection when webhooks are configured.
+- *21.04.2026* - Due to the fact that the webhooks are not available on the local environment switch to Azure AKS has been made.
