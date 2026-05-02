@@ -33,34 +33,22 @@ NODE_RG=$(az aks show \
   --name gitops-lab-aks \
   --query nodeResourceGroup -o tsv)
 
-echo "==> Creating static public IPs..."
+echo "==> Creating static public IP..."
 az network public-ip create \
   --resource-group "$NODE_RG" \
-  --name argocd-public-ip \
+  --name gitops-tool-public-ip \
   --sku Standard \
   --allocation-method Static
 
-az network public-ip create \
+STATIC_IP=$(az network public-ip show \
   --resource-group "$NODE_RG" \
-  --name flux-webhook-public-ip \
-  --sku Standard \
-  --allocation-method Static
-
-ARGOCD_IP=$(az network public-ip show \
-  --resource-group "$NODE_RG" \
-  --name argocd-public-ip \
-  --query ipAddress -o tsv)
-
-FLUX_IP=$(az network public-ip show \
-  --resource-group "$NODE_RG" \
-  --name flux-webhook-public-ip \
+  --name gitops-tool-public-ip \
   --query ipAddress -o tsv)
 
 echo ""
 echo "==> Cluster is ready"
-echo "    Argo CD static IP:       $ARGOCD_IP"
-echo "    Flux webhook static IP:  $FLUX_IP"
+echo "    Static IP:  $STATIC_IP"
 echo ""
-echo "    Next steps:"
-echo "    argo-cd/aks/install-argocd-aks.sh $ARGOCD_IP"
-echo "    flux/aks/install-flux-aks.sh $FLUX_IP"
+echo "    Next: run the tool-specific install script."
+echo "    argo-cd/aks/install-argocd-aks.sh"
+echo "    flux/aks/install-flux-aks.sh"

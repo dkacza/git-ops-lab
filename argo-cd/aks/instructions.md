@@ -1,9 +1,9 @@
-# AKS Cluster Setup
+# AKS Cluster Setup — Argo CD
 
 ## Automated Workflow
 ```shell
 ../../aks/provision-aks.sh
-./install-argocd-aks.sh <ARGO_CD_STATIC_IP>
+./install-argocd-aks.sh
 
 <Register or reconfigure the webhook>
 
@@ -23,33 +23,9 @@ az aks start --resource-group gitops-lab-rg --name gitops-lab-aks
 
 ---
 
-## Static Public IP for Argo CD
-
-Required so the GitHub webhook URL stays stable across cluster stop/start cycles.
-Must be created in AKS's managed node resource group, not the main resource group.
-
-```shell
-NODE_RG=$(az aks show \
-  --resource-group gitops-lab-rg \
-  --name gitops-lab-aks \
-  --query nodeResourceGroup -o tsv)
-
-az network public-ip create \
-  --resource-group $NODE_RG \
-  --name argocd-public-ip \
-  --sku Standard \
-  --allocation-method Static
-
-az network public-ip show \
-  --resource-group $NODE_RG \
-  --name argocd-public-ip \
-  --query ipAddress -o tsv
-```
-
 ## Installing Argo CD
-For installing Argo CD use the `install-argocd-aks.sh` script. It uses the same commands as the `install-argo-local.sh` as it is based on the kubectl interface which is set to azure.
 
-The only difference is that the static IP needs to be provided as a parameter.
+Run `install-argocd-aks.sh` — it looks up the `gitops-tool-public-ip` created by `provision-aks.sh`, installs Argo CD, configures the webhook secret, and prints the GitHub webhook registration details.
 
 ## Registering the GitHub Webhook
 

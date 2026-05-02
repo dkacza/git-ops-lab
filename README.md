@@ -20,7 +20,7 @@ Jenkins	Push (traditional)
 ## Setup
 Single-node AKS cluster on Azure (Standard_B2as_v2).
 Each setup runs on a plain restored cluster.
-Cluster provisioning and teardown commands are in `aks/instructions.md`.
+Cluster provisioning and teardown scripts are in `aks/`.
 
 Running on single node is a constraint. We cannot test the node-failover scenarios. This has to be presented as a boundary of the research and an idea for future expansion.
 
@@ -90,6 +90,9 @@ This lab uses a two-repo GitOps setup:
 
 **`git-ops-lab`** (this repo) — config repo; the desired cluster state that CD tools reconcile against.
 ```
+aks/
+  provision-aks.sh         — provisions AKS cluster (shared across all stacks)
+  deprovision-aks.sh       — tears down the resource group and all resources
 argo-cd/
   application.yaml        — Argo CD Application CRD
   manifests/              — Kubernetes manifests watched by Argo CD
@@ -100,14 +103,24 @@ argo-cd/
     frontend-service.yaml
   aks/
     instructions.md         — AKS cluster setup guide
-    provision-aks.sh        — provisions AKS cluster and static public IP
-    deprovision-aks.sh      — tears down the resource group and all resources
-    install-argocd-aks.sh   — installs Argo CD on AKS with static IP + webhook
+    install-argocd-aks.sh   — installs Argo CD on AKS, creates static IP + webhook
   local/
     instructions.md         — local cluster setup guide
     install-argo-local.sh   — installs Argo CD on local cluster with port-forward
 flux/
-  manifests/              — Kubernetes manifests watched by Flux (planned)
+  manifests/              — Kubernetes manifests watched by Flux
+    namespace.yaml
+    backend-deployment.yaml
+    backend-service.yaml
+    frontend-deployment.yaml
+    frontend-service.yaml
+  clusters/aks/           — Flux system manifests (bootstrapped by flux CLI)
+    flux-system/
+    budget-tracker.yaml   — Kustomization pointing at flux/manifests
+    webhook-receiver.yaml — GitHub webhook Receiver CRD
+  aks/
+    instructions.md         — Flux AKS setup guide
+    install-flux-aks.sh     — bootstraps Flux, creates static IP, configures webhook receiver
 measurements/
   e2e-deployment/
     measure_cd.sh           — measures CD latency: git-ops-lab commit → pods ready
@@ -117,11 +130,11 @@ measurements/
     measure_self_healing.sh — introduces replica drift on backend, measures reaction and recovery time
     results/                — CSV output, one file per day per stack
   resource-consumption/
-    measure_resources.sh    — samples kubectl top for all Argo CD pods at 250ms interval
+    measure_resources.sh    — samples kubectl top for all CD tool pods at 250ms interval
     render_graph.py         — renders aggregated CPU and memory graph from CSV
     results/                — CSV and PNG output, overwritten on each run
   failure-recovery/
-    measure_failure_recovery.sh — kills all Argo CD pods, measures time until all are Ready again
+    measure_failure_recovery.sh — kills all CD tool pods, measures time until all are Ready again
     results/                — CSV output, one file per day per stack
 old/
   README-rancher.md       — original README from the local Rancher Desktop setup
@@ -145,7 +158,12 @@ For ArgoCD setup refer to `argo-cd/aks/instructions.md`
 - [x] Static public IP + GitHub webhook configured
 
 #### Flux stack
-- [ ] Not started
+- [x] Config repo structure created (`flux/manifests/`)
+- [x] Kubernetes manifests prepared for GHCR images
+- [x] Flux installed on AKS cluster (bootstrapped)
+- [x] Budget-tracker Kustomization configured
+- [x] GitHub Actions CI pipeline wired up (updates flux/manifests on push)
+- [x] Static public IP + GitHub webhook configured
 
 #### Jenkins stack
 - [ ] Not started
@@ -154,13 +172,14 @@ For ArgoCD setup refer to `argo-cd/aks/instructions.md`
 - [x] E2E deployment — `measure_cd.sh`: git-ops-lab commit → pods ready (CD latency)
 - [x] E2E deployment — `measure_e2e.sh`: app repo commit → pods ready (full pipeline latency)
 - [x] Self-healing latency — `measure_self_healing.sh`: replica drift on backend → reaction and recovery time
-- [x] Resource consumption — `measure_resources.sh`: samples all Argo CD pods at 250ms; `render_graph.py`: aggregated CPU/memory graph
-- [x] Failure recovery — `measure_failure_recovery.sh`: kills all Argo CD pods, measures time until all are Ready again
+- [x] Resource consumption — `measure_resources.sh`: samples all CD tool pods at 250ms; `render_graph.py`: aggregated CPU/memory graph
+- [x] Failure recovery — `measure_failure_recovery.sh`: kills all CD tool pods, measures time until all are Ready again
 
 
 ### Software Versions:
 - AKS: 1.31
-- ArgoCD: 3.3.6
+- Argo CD: 3.3.6
+- Flux: 2.8.6
 
 ### Constraints
 - Single-node cluster — node-failover scenarios are out of scope

@@ -3,20 +3,20 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-if [ $# -ne 1 ]; then
-  echo "Usage: $0 <static-public-ip>"
-  echo ""
-  echo "Pre-create the static IP with:"
-  echo "  NODE_RG=\$(az aks show --resource-group gitops-lab-rg --name gitops-lab-aks --query nodeResourceGroup -o tsv)"
-  echo "  az network public-ip create --resource-group \$NODE_RG --name argocd-public-ip --sku Standard --allocation-method Static"
-  echo "  az network public-ip show --resource-group \$NODE_RG --name argocd-public-ip --query ipAddress -o tsv"
-  exit 1
-fi
-
-STATIC_IP="$1"
-
 echo "==> Checking cluster connectivity..."
 kubectl cluster-info --request-timeout=5s > /dev/null
+
+echo "==> Resolving node resource group..."
+NODE_RG=$(az aks show \
+  --resource-group gitops-lab-rg \
+  --name gitops-lab-aks \
+  --query nodeResourceGroup -o tsv)
+
+STATIC_IP=$(az network public-ip show \
+  --resource-group "$NODE_RG" \
+  --name gitops-tool-public-ip \
+  --query ipAddress -o tsv)
+echo "    Static IP: $STATIC_IP"
 
 echo "==> Creating argocd namespace..."
 kubectl create namespace argocd --dry-run=client -o yaml | kubectl apply -f -

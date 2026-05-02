@@ -2,20 +2,8 @@
 
 ## Automated Workflow
 ```shell
-# 1. Bootstrap Flux (done once, commits flux-system manifests to the repo)
 export GITHUB_TOKEN=<PAT_WITH_REPO_SCOPE>
-flux bootstrap github \
-  --owner=dkacza \
-  --repository=git-ops-lab \
-  --branch=main \
-  --path=flux/clusters/aks \
-  --personal
-
-# 2. Pull the committed Flux manifests locally
-git pull
-
-# 3. Create static public IP, then run the install script
-./install-flux-aks.sh <FLUX_WEBHOOK_STATIC_IP>
+./install-flux-aks.sh
 
 # <Register the webhook in GitHub using the URL printed by the script>
 
@@ -23,28 +11,9 @@ git pull
 ../../aks/deprovision-aks.sh
 ```
 
-## Static Public IP for Flux Webhook
+## Installing Flux
 
-Required so the GitHub webhook URL stays stable across cluster stop/start cycles.
-Must be created in AKS's managed node resource group, not the main resource group.
-
-```shell
-NODE_RG=$(az aks show \
-  --resource-group gitops-lab-rg \
-  --name gitops-lab-aks \
-  --query nodeResourceGroup -o tsv)
-
-az network public-ip create \
-  --resource-group $NODE_RG \
-  --name flux-webhook-public-ip \
-  --sku Standard \
-  --allocation-method Static
-
-az network public-ip show \
-  --resource-group $NODE_RG \
-  --name flux-webhook-public-ip \
-  --query ipAddress -o tsv
-```
+Run `install-flux-aks.sh` with `GITHUB_TOKEN` exported — it bootstraps Flux onto the cluster (committing the `flux-system` manifests to this repo), creates the static public IP, configures the webhook receiver, and prints the GitHub webhook registration details.
 
 ## Registering the GitHub Webhook
 

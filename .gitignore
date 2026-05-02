@@ -1,3 +1,5 @@
 personal-access-token.txt
 argo-cd/argo-cd-admin-password.txt
 argo-cd/argo-cd-webhook-secret.txt
+measurements/*
+presentation/*

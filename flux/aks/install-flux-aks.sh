@@ -4,20 +4,36 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
-if [ $# -ne 1 ]; then
-  echo "Usage: $0 <static-public-ip>"
-  echo ""
-  echo "Pre-create the static IP with:"
-  echo "  NODE_RG=\$(az aks show --resource-group gitops-lab-rg --name gitops-lab-aks --query nodeResourceGroup -o tsv)"
-  echo "  az network public-ip create --resource-group \$NODE_RG --name flux-webhook-public-ip --sku Standard --allocation-method Static"
-  echo "  az network public-ip show --resource-group \$NODE_RG --name flux-webhook-public-ip --query ipAddress -o tsv"
+echo "==> Checking cluster connectivity..."
+kubectl cluster-info --request-timeout=5s > /dev/null
+
+if [ -z "${GITHUB_TOKEN:-}" ]; then
+  echo "[ERROR] GITHUB_TOKEN is not set. Export a PAT with repo scope before running this script." >&2
   exit 1
 fi
 
-STATIC_IP="$1"
+echo "==> Resolving node resource group..."
+NODE_RG=$(az aks show \
+  --resource-group gitops-lab-rg \
+  --name gitops-lab-aks \
+  --query nodeResourceGroup -o tsv)
 
-echo "==> Checking cluster connectivity..."
-kubectl cluster-info --request-timeout=5s > /dev/null
+STATIC_IP=$(az network public-ip show \
+  --resource-group "$NODE_RG" \
+  --name gitops-tool-public-ip \
+  --query ipAddress -o tsv)
+echo "    Static IP: $STATIC_IP"
+
+echo "==> Bootstrapping Flux..."
+flux bootstrap github \
+  --owner=dkacza \
+  --repository=git-ops-lab \
+  --branch=main \
+  --path=flux/clusters/aks \
+  --personal
+
+echo "==> Pulling Flux manifests committed by bootstrap..."
+git -C "$REPO_ROOT" pull
 
 echo "==> Waiting for Flux pods to be ready (timeout: 120s)..."
 kubectl wait --for=condition=Ready pods --all -n flux-system --timeout=120s
