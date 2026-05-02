@@ -27,26 +27,40 @@ az aks wait \
 echo "==> Fetching cluster credentials..."
 az aks get-credentials --resource-group gitops-lab-rg --name gitops-lab-aks
 
-echo "==> Creating static public IP for Argo CD..."
+echo "==> Resolving node resource group..."
 NODE_RG=$(az aks show \
   --resource-group gitops-lab-rg \
   --name gitops-lab-aks \
   --query nodeResourceGroup -o tsv)
 
+echo "==> Creating static public IPs..."
 az network public-ip create \
   --resource-group "$NODE_RG" \
   --name argocd-public-ip \
   --sku Standard \
   --allocation-method Static
 
-STATIC_IP=$(az network public-ip show \
+az network public-ip create \
+  --resource-group "$NODE_RG" \
+  --name flux-webhook-public-ip \
+  --sku Standard \
+  --allocation-method Static
+
+ARGOCD_IP=$(az network public-ip show \
   --resource-group "$NODE_RG" \
   --name argocd-public-ip \
   --query ipAddress -o tsv)
 
+FLUX_IP=$(az network public-ip show \
+  --resource-group "$NODE_RG" \
+  --name flux-webhook-public-ip \
+  --query ipAddress -o tsv)
+
 echo ""
 echo "==> Cluster is ready"
-echo "    Static IP:  $STATIC_IP"
+echo "    Argo CD static IP:       $ARGOCD_IP"
+echo "    Flux webhook static IP:  $FLUX_IP"
 echo ""
-echo "    Next step — install Argo CD:"
-echo "    ./install-argocd-aks.sh $STATIC_IP"
+echo "    Next steps:"
+echo "    argo-cd/aks/install-argocd-aks.sh $ARGOCD_IP"
+echo "    flux/aks/install-flux-aks.sh $FLUX_IP"

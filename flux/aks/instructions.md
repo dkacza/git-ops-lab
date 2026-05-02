@@ -20,7 +20,7 @@ git pull
 # <Register the webhook in GitHub using the URL printed by the script>
 
 # Full teardown
-../../argo-cd/aks/deprovision-aks.sh
+../../aks/deprovision-aks.sh
 ```
 
 ## Static Public IP for Flux Webhook

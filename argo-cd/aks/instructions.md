@@ -2,32 +2,13 @@
 
 ## Automated Workflow
 ```shell
-./provision.aks.sh
-./install-argcd-aks.sh <ARGO_CD_STATIC_IP>
+../../aks/provision-aks.sh
+./install-argocd-aks.sh <ARGO_CD_STATIC_IP>
 
 <Register or reconfigure the webhook>
 
 # Full teardown
-./deprovision-aks.sh
-```
-
-
-## Manual Steps
-### AKS provisioning
-```shell
-az login
-az account set --subscription 0ca6e150-1b48-4fed-84f7-345fb546ccc9
-
-az group create --name gitops-lab-rg --location westeurope
-
-az aks create \
-  --resource-group gitops-lab-rg \
-  --name gitops-lab-aks \
-  --node-count 1 \
-  --node-vm-size standard_b2as_v2 \
-  --generate-ssh-keys
-
-az aks get-credentials --resource-group gitops-lab-rg --name gitops-lab-aks
+../../aks/deprovision-aks.sh
 ```
 
 ### Stop / Start (between sessions)
@@ -38,13 +19,6 @@ az aks stop --resource-group gitops-lab-rg --name gitops-lab-aks
 
 # Resume (~2 min)
 az aks start --resource-group gitops-lab-rg --name gitops-lab-aks
-```
-
-### Teardown
-
-```shell
-# Deletes cluster, nodes, load balancers, public IPs — everything
-az group delete --name gitops-lab-rg --yes --no-wait
 ```
 
 ---
