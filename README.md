@@ -22,6 +22,8 @@ Single-node AKS cluster on Azure (Standard_B2as_v2).
 Each setup runs on a plain restored cluster.
 Cluster provisioning and teardown scripts are in `aks/`.
 
+Jenkins runs on a separate Azure VM (Standard_B2s, 2 vCPU / 4 GiB) — not inside the AKS cluster. This reflects the authentic push-based architecture: Jenkins holds cluster credentials externally and pushes via `kubectl apply`. Provisioning scripts are in `jenkins/vm/`.
+
 Running on single node is a constraint. We cannot test the node-failover scenarios. This has to be presented as a boundary of the research and an idea for future expansion.
 
 
@@ -121,20 +123,35 @@ flux/
   aks/
     instructions.md         — Flux AKS setup guide
     install-flux-aks.sh     — bootstraps Flux, creates static IP, configures webhook receiver
+jenkins/
+  manifests/              — Kubernetes manifests applied by Jenkins via kubectl
+    namespace.yaml
+    backend-deployment.yaml
+    backend-service.yaml
+    frontend-deployment.yaml
+    frontend-service.yaml
+  vm/
+    provision-jenkins-vm.sh  — creates Azure VM, installs Jenkins (JCasC), wires AKS credentials
+    deprovision-jenkins-vm.sh — deletes Jenkins VM and its public IP
+    instructions.md          — VM setup guide and GitHub Actions wiring instructions
 measurements/
   e2e-deployment/
-    measure_cd.sh           — measures CD latency: git-ops-lab commit → pods ready
-    measure_e2e.sh          — measures full E2E latency: app repo commit → pods ready
+    measure_cd.sh           — measures CD latency: git-ops-lab commit → pods ready (Argo CD)
+    measure_cd_jenkins.sh   — measures CD latency: commit + Jenkins trigger → pods ready
+    measure_e2e.sh          — measures full E2E latency: app repo commit → pods ready (Argo CD)
+    measure_e2e_jenkins.sh  — measures full E2E latency: app repo commit → pods ready (Jenkins)
     results/                — CSV output, one file per day per stack
   self-healing/
     measure_self_healing.sh — introduces replica drift on backend, measures reaction and recovery time
     results/                — CSV output, one file per day per stack
   resource-consumption/
-    measure_resources.sh    — samples kubectl top for all CD tool pods at 250ms interval
+    measure_resources.sh         — samples kubectl top for all CD tool pods at 250ms interval (Argo CD / Flux)
+    measure_resources_jenkins.sh — samples Jenkins process CPU/RSS via SSH at 250ms interval
     render_graph.py         — renders aggregated CPU and memory graph from CSV
     results/                — CSV and PNG output, overwritten on each run
   failure-recovery/
-    measure_failure_recovery.sh — kills all CD tool pods, measures time until all are Ready again
+    measure_failure_recovery.sh         — kills all CD tool pods, measures time until all are Ready again (Argo CD / Flux)
+    measure_failure_recovery_jenkins.sh — stops Jenkins systemd service, measures time until HTTP 200 on /login
     results/                — CSV output, one file per day per stack
 old/
   README-rancher.md       — original README from the local Rancher Desktop setup
@@ -166,23 +183,32 @@ For ArgoCD setup refer to `argo-cd/aks/instructions.md`
 - [x] Static public IP + GitHub webhook configured
 
 #### Jenkins stack
-- [ ] Not started
+For Jenkins setup refer to `jenkins/vm/instructions.md`
+
+- [x] Config repo structure created (`jenkins/manifests/`)
+- [x] Kubernetes manifests prepared for GHCR images
+- [x] Provisioning script (`provision-jenkins-vm.sh`) — creates Azure VM, installs Jenkins with JCasC
+- [ ] Jenkins VM provisioned and verified on AKS
+- [ ] `budget-tracker-deploy` pipeline job confirmed working end-to-end
+- [ ] GitHub Actions CI pipeline wired up (POST trigger after image tag commit)
 
 #### Measurement scripts
-- [x] E2E deployment — `measure_cd.sh`: git-ops-lab commit → pods ready (CD latency)
-- [x] E2E deployment — `measure_e2e.sh`: app repo commit → pods ready (full pipeline latency)
-- [x] Self-healing latency — `measure_self_healing.sh`: replica drift on backend → reaction and recovery time
-- [x] Resource consumption — `measure_resources.sh`: samples all CD tool pods at 250ms; `render_graph.py`: aggregated CPU/memory graph
-- [x] Failure recovery — `measure_failure_recovery.sh`: kills all CD tool pods, measures time until all are Ready again
+- [x] E2E deployment — `measure_cd.sh` / `measure_cd_jenkins.sh`: git-ops-lab commit → pods ready (CD latency)
+- [x] E2E deployment — `measure_e2e.sh` / `measure_e2e_jenkins.sh`: app repo commit → pods ready (full pipeline latency)
+- [x] Self-healing latency — `measure_self_healing.sh`: replica drift on backend → reaction and recovery time (pull-based only; Jenkins has no equivalent)
+- [x] Resource consumption — `measure_resources.sh` / `measure_resources_jenkins.sh`: pod CPU/memory via kubectl top (Argo CD, Flux) or process RSS via SSH (Jenkins); `render_graph.py`: aggregated CPU/memory graph
+- [x] Failure recovery — `measure_failure_recovery.sh` / `measure_failure_recovery_jenkins.sh`: pod restart time (Argo CD, Flux) or systemd service restart time (Jenkins)
 
 
 ### Software Versions:
 - AKS: 1.31
 - Argo CD: 3.3.6
 - Flux: 2.8.6
+- Jenkins: LTS (version recorded after first provisioning)
 
 ### Constraints
 - Single-node cluster — node-failover scenarios are out of scope
+- Jenkins runs on a separate Azure VM (Standard_B2s) — resource and failure-recovery measurements use VM process metrics (SSH + `ps`) rather than `kubectl top`. JVM heap capped at 512m for comparability. This architectural difference is intentional and documented in the thesis.
 
 ## Change Log
 - *24.04.2026* - Failed deployment detection time metric scrapped. Argo CD's `Degraded` health status for a failed rollout is derived directly from Kubernetes's `ProgressDeadlineExceeded` condition, which fires after `progressDeadlineSeconds`. The measured value would equal that parameter regardless of which GitOps tool is used — it is not attributable to the CD tool. The qualitative difference (GitOps tools surface failures automatically; Jenkins requires explicit post-deploy verification in the pipeline) will be noted in the thesis without a latency measurement.
