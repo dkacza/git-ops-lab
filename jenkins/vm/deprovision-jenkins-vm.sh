@@ -11,18 +11,22 @@ if [[ "$CONFIRM" != "yes" ]]; then
   exit 0
 fi
 
+NIC_NAME="${VM_NAME}VMNic"
+
 echo "==> Deleting VM $VM_NAME..."
 az vm delete \
   --resource-group "$RESOURCE_GROUP" \
   --name "$VM_NAME" \
-  --yes \
-  --no-wait
+  --yes
+
+echo "==> Deleting NIC $NIC_NAME (holds the public IP association)..."
+az network nic delete \
+  --resource-group "$RESOURCE_GROUP" \
+  --name "$NIC_NAME"
 
 echo "==> Deleting public IP $PUBLIC_IP_NAME..."
 az network public-ip delete \
   --resource-group "$RESOURCE_GROUP" \
-  --name "$PUBLIC_IP_NAME" \
-  --no-wait
+  --name "$PUBLIC_IP_NAME"
 
-echo "==> Deletion triggered (running in background)."
-echo "    Monitor progress: az vm show --resource-group $RESOURCE_GROUP --name $VM_NAME"
+echo "==> Done."

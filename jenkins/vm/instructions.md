@@ -5,30 +5,85 @@
 - AKS cluster provisioned and kubectl context set (`aks/provision-aks.sh` completed)
 - Azure CLI authenticated (`az login`)
 
-## Automated setup
+## Step 1 — provision the VM (~3 min)
 
 ```bash
-./provision-jenkins-vm.sh
+./provision-vm.sh
 ```
 
-The script:
-1. Creates a static public IP and an Azure VM (`Standard_B2s`, Ubuntu 22.04)
-2. Installs Java 17, Jenkins (LTS), and kubectl on the VM
-3. Caps JVM heap at 512m (`JAVA_OPTS=-Xmx512m -Xms256m`) — resource parity decision, see README
-4. Installs the Configuration as Code and Job DSL plugins
-5. Creates the `budget-tracker-deploy` pipeline job via JCasC (no manual UI steps)
-6. Creates an AKS ServiceAccount `jenkins-deployer` with RBAC scoped to `budget-tracker` namespace
-7. Stores the resulting kubeconfig as the `aks-kubeconfig` Jenkins credential
-8. Generates an API token and prints GitHub Actions secret values
+Prints the VM public IP at the end.
 
-## GitHub Actions wiring
+## Step 2 — install Jenkins and create AKS credentials (~10 min)
+
+```bash
+./setup-jenkins.sh <vm-public-ip>
+```
+
+This script:
+- Installs Java 21, Jenkins LTS, and kubectl on the VM
+- Sets the Jenkins root URL (required for SECURITY-3674 fix)
+- Creates the `jenkins-deployer` ServiceAccount + RBAC in AKS
+- Saves the kubeconfig to `jenkins/aks-kubeconfig`
+- Prints the Jenkins URL and initial admin password
+
+## Step 3 — manual Jenkins configuration (~5 min)
+
+Open `http://<vm-ip>:8080` in a browser.
+
+**3a. Unlock Jenkins**
+- Enter the initial admin password printed by `setup-jenkins.sh`
+- Click "Install suggested plugins", wait for it to finish
+- Create the admin user (username: `admin`, choose a password)
+- Save the password to `jenkins/jenkins-admin-password.txt`
+
+**3b. Add the AKS kubeconfig credential**
+- Go to **Manage Jenkins → Credentials → System → Global credentials → Add Credentials**
+- Kind: `Secret file`
+- ID: `aks-kubeconfig`
+- File: upload `jenkins/aks-kubeconfig`
+- Click Save
+
+**3c. Create the deploy pipeline**
+- Go to **New Item**, name it `budget-tracker-deploy`, type: `Pipeline`
+- Paste the following into the Pipeline script box:
+
+```groovy
+pipeline {
+  agent any
+  stages {
+    stage('Deploy') {
+      steps {
+        withCredentials([file(credentialsId: 'aks-kubeconfig', variable: 'KUBECONFIG')]) {
+          sh 'rm -rf /tmp/git-ops-lab && git clone https://github.com/dkacza/git-ops-lab /tmp/git-ops-lab'
+          sh 'kubectl apply -f /tmp/git-ops-lab/jenkins/manifests/'
+        }
+      }
+    }
+    stage('Wait for rollout') {
+      steps {
+        withCredentials([file(credentialsId: 'aks-kubeconfig', variable: 'KUBECONFIG')]) {
+          sh 'kubectl rollout status deployment/backend -n budget-tracker --timeout=180s'
+          sh 'kubectl rollout status deployment/frontend -n budget-tracker --timeout=180s'
+        }
+      }
+    }
+  }
+}
+```
+
+**3d. Generate an API token**
+- Go to **Account → Security → API Token → Add new Token**
+- Name it `github-actions`, click Generate
+- Save the token to `jenkins/jenkins-api-token.txt`
+
+## Step 4 — wire GitHub Actions
 
 Add these secrets to the `budget-tracker` repository:
 
 | Secret | Value |
 |---|---|
-| `JENKINS_URL` | `http://<vm-ip>:8080` (printed by script) |
-| `JENKINS_API_TOKEN` | printed by script, also in `jenkins/jenkins-api-token.txt` |
+| `JENKINS_URL` | `http://<vm-ip>:8080` |
+| `JENKINS_API_TOKEN` | token from step 3e |
 
 Add this step to the budget-tracker CI workflow **after** the image tag commit step:
 
