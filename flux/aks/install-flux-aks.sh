@@ -18,6 +18,13 @@ NODE_RG=$(az aks show \
   --name gitops-lab-aks \
   --query nodeResourceGroup -o tsv)
 
+echo "==> Creating static public IP..."
+az network public-ip create \
+  --resource-group "$NODE_RG" \
+  --name gitops-tool-public-ip \
+  --sku Standard \
+  --allocation-method Static
+
 STATIC_IP=$(az network public-ip show \
   --resource-group "$NODE_RG" \
   --name gitops-tool-public-ip \

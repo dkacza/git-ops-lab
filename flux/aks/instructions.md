@@ -7,13 +7,20 @@ export GITHUB_TOKEN=<PAT_WITH_REPO_SCOPE>
 
 # <Register the webhook in GitHub using the URL printed by the script>
 
+# Switch to another stack (releases the public IP)
+./uninstall-flux-aks.sh
+
 # Full teardown
 ../../aks/deprovision-aks.sh
 ```
 
 ## Installing Flux
 
-Run `install-flux-aks.sh` with `GITHUB_TOKEN` exported — it bootstraps Flux onto the cluster (committing the `flux-system` manifests to this repo), creates the static public IP, configures the webhook receiver, and prints the GitHub webhook registration details.
+Run `install-flux-aks.sh` with `GITHUB_TOKEN` exported — it creates the `gitops-tool-public-ip` static IP, bootstraps Flux onto the cluster (committing the `flux-system` manifests to this repo), configures the webhook receiver, and prints the GitHub webhook registration details.
+
+## Uninstalling Flux
+
+Run `uninstall-flux-aks.sh` before switching to another stack. It runs `flux uninstall`, removes the `budget-tracker` namespace, and deletes the `gitops-tool-public-ip`, freeing the public IP slot for the next stack.
 
 ## Registering the GitHub Webhook
 

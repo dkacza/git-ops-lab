@@ -105,7 +105,8 @@ argo-cd/
     frontend-service.yaml
   aks/
     instructions.md         — AKS cluster setup guide
-    install-argocd-aks.sh   — installs Argo CD on AKS, creates static IP + webhook
+    install-argocd-aks.sh   — creates static IP, installs Argo CD, configures webhook
+    uninstall-argocd-aks.sh — removes Argo CD and deletes static IP
   local/
     instructions.md         — local cluster setup guide
     install-argo-local.sh   — installs Argo CD on local cluster with port-forward
@@ -122,7 +123,8 @@ flux/
     webhook-receiver.yaml — GitHub webhook Receiver CRD
   aks/
     instructions.md         — Flux AKS setup guide
-    install-flux-aks.sh     — bootstraps Flux, creates static IP, configures webhook receiver
+    install-flux-aks.sh     — creates static IP, bootstraps Flux, configures webhook receiver
+    uninstall-flux-aks.sh   — removes Flux and deletes static IP
 jenkins/
   manifests/              — Kubernetes manifests applied by Jenkins via kubectl
     namespace.yaml
@@ -131,9 +133,11 @@ jenkins/
     frontend-deployment.yaml
     frontend-service.yaml
   vm/
-    provision-jenkins-vm.sh  — creates Azure VM, installs Jenkins (JCasC), wires AKS credentials
-    deprovision-jenkins-vm.sh — deletes Jenkins VM and its public IP
-    instructions.md          — VM setup guide and GitHub Actions wiring instructions
+    provision-vm.sh             — creates Azure VM for Jenkins
+    install-jenkins.sh          — installs Java 21, Jenkins LTS, kubectl on the VM (called by setup-jenkins.sh)
+    setup-jenkins.sh            — wires AKS credentials, creates ServiceAccount + RBAC, saves kubeconfig
+    deprovision-jenkins-vm.sh   — deletes Jenkins VM and its public IP
+    instructions.md             — VM setup guide and GitHub Actions wiring instructions
 measurements/
   e2e-deployment/
     measure_cd.sh           — measures CD latency: git-ops-lab commit → pods ready (Argo CD)
@@ -187,10 +191,10 @@ For Jenkins setup refer to `jenkins/vm/instructions.md`
 
 - [x] Config repo structure created (`jenkins/manifests/`)
 - [x] Kubernetes manifests prepared for GHCR images
-- [x] Provisioning script (`provision-jenkins-vm.sh`) — creates Azure VM, installs Jenkins with JCasC
-- [ ] Jenkins VM provisioned and verified on AKS
-- [ ] `budget-tracker-deploy` pipeline job confirmed working end-to-end
-- [ ] GitHub Actions CI pipeline wired up (POST trigger after image tag commit)
+- [x] Provisioning scripts (`provision-vm.sh`, `install-jenkins.sh`, `setup-jenkins.sh`) — create Azure VM, install Jenkins, wire AKS credentials
+- [x] Jenkins VM provisioned and verified on AKS
+- [x] `budget-tracker-deploy` pipeline job confirmed working end-to-end
+- [x] GitHub Actions CI pipeline wired up (POST trigger after image tag commit)
 
 #### Measurement scripts
 - [x] E2E deployment — `measure_cd.sh` / `measure_cd_jenkins.sh`: git-ops-lab commit → pods ready (CD latency)
@@ -211,6 +215,7 @@ For Jenkins setup refer to `jenkins/vm/instructions.md`
 - Jenkins runs on a separate Azure VM (Standard_B2s) — resource and failure-recovery measurements use VM process metrics (SSH + `ps`) rather than `kubectl top`. JVM heap capped at 512m for comparability. This architectural difference is intentional and documented in the thesis.
 
 ## Change Log
+- *24.06.2026* - Static IP lifecycle moved out of `provision-aks.sh` and into the per-stack install scripts. `install-argocd-aks.sh` and `install-flux-aks.sh` now create `gitops-tool-public-ip` on install; new `uninstall-argocd-aks.sh` and `uninstall-flux-aks.sh` scripts delete it on teardown. This ensures the IP slot is only consumed while a pull-based stack is active, leaving room for the Jenkins frontend LoadBalancer within the 3-IP subscription limit.
 - *24.04.2026* - Failed deployment detection time metric scrapped. Argo CD's `Degraded` health status for a failed rollout is derived directly from Kubernetes's `ProgressDeadlineExceeded` condition, which fires after `progressDeadlineSeconds`. The measured value would equal that parameter regardless of which GitOps tool is used — it is not attributable to the CD tool. The qualitative difference (GitOps tools surface failures automatically; Jenkins requires explicit post-deploy verification in the pipeline) will be noted in the thesis without a latency measurement.
 - *22.04.2026* - Rollback time metric scrapped. Via git revert the measurement is structurally identical to the E2E CD latency already captured by `measure_cd.sh` — both are a git-ops-lab commit followed by Argo CD sync and pod rollover. The only meaningfully different rollback path (Argo CD native `argocd app rollback`) is not comparable across stacks. The thesis will treat rollback as a qualitative process difference: GitOps rollback is a git revert (auditable, PR-reviewable), Jenkins rollback requires re-triggering the full CI pipeline.
 - *22.04.2026* - Synchronisation latency metric scrapped. With webhooks configured on both pull-based stacks, the measured value reflects GitHub's webhook delivery latency (network round-trip to AKS Poland Central), not CD tool behaviour. Argo CD and Flux would produce near-identical results with no tool-attributable signal. To be noted in the thesis as a qualitative observation: pull-based tools achieve near-instantaneous detection when webhooks are configured.

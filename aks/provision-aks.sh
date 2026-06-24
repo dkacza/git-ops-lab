@@ -27,28 +27,10 @@ az aks wait \
 echo "==> Fetching cluster credentials..."
 az aks get-credentials --resource-group gitops-lab-rg --name gitops-lab-aks
 
-echo "==> Resolving node resource group..."
-NODE_RG=$(az aks show \
-  --resource-group gitops-lab-rg \
-  --name gitops-lab-aks \
-  --query nodeResourceGroup -o tsv)
-
-echo "==> Creating static public IP..."
-az network public-ip create \
-  --resource-group "$NODE_RG" \
-  --name gitops-tool-public-ip \
-  --sku Standard \
-  --allocation-method Static
-
-STATIC_IP=$(az network public-ip show \
-  --resource-group "$NODE_RG" \
-  --name gitops-tool-public-ip \
-  --query ipAddress -o tsv)
-
 echo ""
 echo "==> Cluster is ready"
-echo "    Static IP:  $STATIC_IP"
 echo ""
 echo "    Next: run the tool-specific install script."
 echo "    argo-cd/aks/install-argocd-aks.sh"
 echo "    flux/aks/install-flux-aks.sh"
+echo "    jenkins/vm/provision-vm.sh  (then setup-jenkins.sh)"

@@ -7,6 +7,9 @@
 
 <Register or reconfigure the webhook>
 
+# Switch to another stack (releases the public IP)
+./uninstall-argocd-aks.sh
+
 # Full teardown
 ../../aks/deprovision-aks.sh
 ```
@@ -25,7 +28,11 @@ az aks start --resource-group gitops-lab-rg --name gitops-lab-aks
 
 ## Installing Argo CD
 
-Run `install-argocd-aks.sh` — it looks up the `gitops-tool-public-ip` created by `provision-aks.sh`, installs Argo CD, configures the webhook secret, and prints the GitHub webhook registration details.
+Run `install-argocd-aks.sh` — it creates the `gitops-tool-public-ip` static IP, installs Argo CD, configures the webhook secret, and prints the GitHub webhook registration details.
+
+## Uninstalling Argo CD
+
+Run `uninstall-argocd-aks.sh` before switching to another stack. It removes the `argocd` namespace and deletes the `gitops-tool-public-ip`, freeing the public IP slot for the next stack.
 
 ## Registering the GitHub Webhook
 
