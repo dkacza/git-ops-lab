@@ -95,6 +95,7 @@ This lab uses a two-repo GitOps setup:
 aks/
   provision-aks.sh         — provisions AKS cluster (shared across all stacks)
   deprovision-aks.sh       — tears down the resource group and all resources
+credentials.md             — inventory of all secrets and tokens across all stacks
 argo-cd/
   application.yaml        — Argo CD Application CRD
   manifests/              — Kubernetes manifests watched by Argo CD
