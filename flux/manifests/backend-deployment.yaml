@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: backend
-          image: ghcr.io/dkacza/budget-tracker-backend:sha-650792f
+          image: ghcr.io/dkacza/budget-tracker-backend:sha-00c452c
           imagePullPolicy: Always
           ports:
             - containerPort: 8080
