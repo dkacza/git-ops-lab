@@ -1,13 +1,19 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if [[ $# -lt 1 ]]; then
-    echo "Usage: $0 <path-to-budget-tracker-repo> [-n <count>]" >&2
+# Measures full E2E latency for the Jenkins stack:
+# app repo commit → CI builds & commits image tag → Jenkins triggered → both pods ready.
+
+if [[ $# -lt 3 ]]; then
+    echo "Usage: $0 <path-to-budget-tracker-repo> <jenkins-url> <jenkins-api-token> [-n <count>]" >&2
+    echo "  e.g. $0 ~/budget-tracker http://1.2.3.4:8080 abc123token -n 5" >&2
     exit 1
 fi
 
 APP_REPO="$(cd "$1" && pwd)"
-shift
+JENKINS_URL="$2"
+JENKINS_TOKEN="$3"
+shift 3
 
 COUNT=1
 while [[ $# -gt 0 ]]; do
@@ -32,7 +38,7 @@ echo "[INFO] Pre-flight: checking cluster connectivity..."
 kubectl cluster-info > /dev/null
 
 mkdir -p "$RESULTS_DIR"
-RESULTS_FILE="$RESULTS_DIR/argocd-e2e-$(date +%Y%m%d).csv"
+RESULTS_FILE="$RESULTS_DIR/jenkins-e2e-$(date +%Y%m%d).csv"
 if [[ ! -f "$RESULTS_FILE" ]]; then
     echo "run,timestamp_utc,t_start_e2e,t_start_cd,t_end,cd_duration_seconds,e2e_duration_seconds" > "$RESULTS_FILE"
 fi
@@ -81,8 +87,13 @@ for i in $(seq 1 "$COUNT"); do
 
     echo "[INFO] T_start_cd: $(date -u -r "$T_START_CD" +%Y-%m-%dT%H:%M:%SZ)"
 
-    # Wait for Argo CD to apply the new manifests
-    echo "[INFO] Waiting for Argo CD to sync..."
+    # Trigger Jenkins immediately after CI commits — push-based, no polling period
+    echo "[INFO] Triggering Jenkins build..."
+    curl -fsS -X POST "$JENKINS_URL/job/budget-tracker-deploy/build" \
+      --user "admin:$JENKINS_TOKEN"
+
+    # Wait for Jenkins to apply the manifests
+    echo "[INFO] Waiting for Jenkins to apply manifests..."
     SYNCED=false
     DEADLINE=$(($(date +%s) + SYNC_TIMEOUT))
     while [[ $(date +%s) -lt $DEADLINE ]]; do
@@ -96,12 +107,12 @@ for i in $(seq 1 "$COUNT"); do
     done
 
     if [[ "$SYNCED" != "true" ]]; then
-        echo "[ERROR] Sync timeout after ${SYNC_TIMEOUT}s — Argo CD may not have synced. Check webhook configuration." >&2
+        echo "[ERROR] Deployment generation did not change after ${SYNC_TIMEOUT}s — check Jenkins job." >&2
         exit 1
     fi
 
     # Wait for both rollouts to complete
-    echo "[INFO] Sync detected. Waiting for rollout to complete..."
+    echo "[INFO] Apply detected. Waiting for rollout to complete..."
     kubectl rollout status deployment/backend  -n "$NAMESPACE" --timeout="${ROLLOUT_TIMEOUT}s"
     kubectl rollout status deployment/frontend -n "$NAMESPACE" --timeout="${ROLLOUT_TIMEOUT}s"
 

@@ -1,11 +1,11 @@
-personal-access-token.txt
 argo-cd/argo-cd-admin-password.txt
 argo-cd/argo-cd-webhook-secret.txt
-measurements/*
-presentation/*
 
 flux/flux-webhook-token.txt
+
 jenkins/jenkins-api-token.txt
 jenkins/aks-kubeconfig
 
+presentation/*
+GitHub-PAT.txt
 next-step.md

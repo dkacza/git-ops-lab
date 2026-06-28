@@ -1,0 +1,2 @@
+run,timestamp_utc,bad_tag,t_start,t_end,detection_seconds
+1,2026-04-24T07:11:25Z,sha-badbeef000,1777014678,1777014685,7
