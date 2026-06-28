@@ -140,24 +140,11 @@ jenkins/
     deprovision-jenkins-vm.sh   — deletes Jenkins VM and its public IP
     instructions.md             — VM setup guide and GitHub Actions wiring instructions
 measurements/
-  e2e-deployment/
-    measure_cd.sh           — measures CD latency: git-ops-lab commit → pods ready (Argo CD)
-    measure_cd_jenkins.sh   — measures CD latency: commit + Jenkins trigger → pods ready
-    measure_e2e.sh          — measures full E2E latency: app repo commit → pods ready (Argo CD)
-    measure_e2e_jenkins.sh  — measures full E2E latency: app repo commit → pods ready (Jenkins)
+  e2e-deployment/           — active measurement scripts
+    measure_e2e.sh          — full E2E latency: app repo commit → pods ready (usage: argocd|flux)
+    measure_e2e_jenkins.sh  — full E2E latency: app repo commit → pods ready (Jenkins)
     results/                — CSV output, one file per day per stack
-  self-healing/
-    measure_self_healing.sh — introduces replica drift on backend, measures reaction and recovery time
-    results/                — CSV output, one file per day per stack
-  resource-consumption/
-    measure_resources.sh         — samples kubectl top for all CD tool pods at 250ms interval (Argo CD / Flux)
-    measure_resources_jenkins.sh — samples Jenkins process CPU/RSS via SSH at 250ms interval
-    render_graph.py         — renders aggregated CPU and memory graph from CSV
-    results/                — CSV and PNG output, overwritten on each run
-  failure-recovery/
-    measure_failure_recovery.sh         — kills all CD tool pods, measures time until all are Ready again (Argo CD / Flux)
-    measure_failure_recovery_jenkins.sh — stops Jenkins systemd service, measures time until HTTP 200 on /login
-    results/                — CSV output, one file per day per stack
+  reference/                — scripts moved here pending verification; not used in the current test run
 old/
   README-rancher.md       — original README from the local Rancher Desktop setup
 ```
@@ -198,11 +185,11 @@ For Jenkins setup refer to `jenkins/vm/instructions.md`
 - [x] GitHub Actions CI pipeline wired up (POST trigger after image tag commit)
 
 #### Measurement scripts
-- [x] E2E deployment — `measure_cd.sh` / `measure_cd_jenkins.sh`: git-ops-lab commit → pods ready (CD latency)
-- [x] E2E deployment — `measure_e2e.sh` / `measure_e2e_jenkins.sh`: app repo commit → pods ready (full pipeline latency)
-- [x] Self-healing latency — `measure_self_healing.sh`: replica drift on backend → reaction and recovery time (pull-based only; Jenkins has no equivalent)
-- [x] Resource consumption — `measure_resources.sh` / `measure_resources_jenkins.sh`: pod CPU/memory via kubectl top (Argo CD, Flux) or process RSS via SSH (Jenkins); `render_graph.py`: aggregated CPU/memory graph
-- [x] Failure recovery — `measure_failure_recovery.sh` / `measure_failure_recovery_jenkins.sh`: pod restart time (Argo CD, Flux) or systemd service restart time (Jenkins)
+- [x] E2E deployment (active) — `measure_e2e.sh <argocd|flux>` / `measure_e2e_jenkins.sh`: app repo commit → pods ready (full pipeline latency)
+- [ ] CD latency (reference) — `reference/cd-deployment/`: git-ops-lab commit → pods ready; pending verification
+- [ ] Self-healing latency (reference) — `reference/self-healing/`: replica drift → reaction and recovery time; pending verification
+- [ ] Resource consumption (reference) — `reference/resource-consumption/`: pod CPU/memory via kubectl top or SSH; pending verification
+- [ ] Failure recovery (reference) — `reference/failure-recovery/`: pod restart time (Argo CD, Flux) or systemd service restart time (Jenkins); pending verification
 
 
 ### Software Versions:

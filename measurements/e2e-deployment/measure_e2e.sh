@@ -1,13 +1,19 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if [[ $# -lt 1 ]]; then
-    echo "Usage: $0 <path-to-budget-tracker-repo> [-n <count>]" >&2
+if [[ $# -lt 2 ]]; then
+    echo "Usage: $0 <argocd|flux> <path-to-budget-tracker-repo> [-n <count>]" >&2
     exit 1
 fi
 
-APP_REPO="$(cd "$1" && pwd)"
-shift
+TOOL="$1"
+if [[ "$TOOL" != "argocd" && "$TOOL" != "flux" ]]; then
+    echo "[ERROR] Unknown tool '$TOOL'. Use 'argocd' or 'flux'." >&2
+    exit 1
+fi
+
+APP_REPO="$(cd "$2" && pwd)"
+shift 2
 
 COUNT=1
 while [[ $# -gt 0 ]]; do
@@ -32,7 +38,7 @@ echo "[INFO] Pre-flight: checking cluster connectivity..."
 kubectl cluster-info > /dev/null
 
 mkdir -p "$RESULTS_DIR"
-RESULTS_FILE="$RESULTS_DIR/argocd-e2e-$(date +%Y%m%d).csv"
+RESULTS_FILE="$RESULTS_DIR/${TOOL}-e2e-$(date +%Y%m%d).csv"
 if [[ ! -f "$RESULTS_FILE" ]]; then
     echo "run,timestamp_utc,t_start_e2e,t_start_cd,t_end,cd_duration_seconds,e2e_duration_seconds" > "$RESULTS_FILE"
 fi
@@ -81,8 +87,8 @@ for i in $(seq 1 "$COUNT"); do
 
     echo "[INFO] T_start_cd: $(date -u -r "$T_START_CD" +%Y-%m-%dT%H:%M:%SZ)"
 
-    # Wait for Argo CD to apply the new manifests
-    echo "[INFO] Waiting for Argo CD to sync..."
+    # Wait for the CD tool to apply the new manifests
+    echo "[INFO] Waiting for $TOOL to sync..."
     SYNCED=false
     DEADLINE=$(($(date +%s) + SYNC_TIMEOUT))
     while [[ $(date +%s) -lt $DEADLINE ]]; do
@@ -96,7 +102,7 @@ for i in $(seq 1 "$COUNT"); do
     done
 
     if [[ "$SYNCED" != "true" ]]; then
-        echo "[ERROR] Sync timeout after ${SYNC_TIMEOUT}s — Argo CD may not have synced. Check webhook configuration." >&2
+        echo "[ERROR] Sync timeout after ${SYNC_TIMEOUT}s — $TOOL may not have synced. Check webhook configuration." >&2
         exit 1
     fi
 
