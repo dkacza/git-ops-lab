@@ -141,8 +141,7 @@ jenkins/
     instructions.md             — VM setup guide and GitHub Actions wiring instructions
 measurements/
   e2e-deployment/           — active measurement scripts
-    measure_e2e.sh          — full E2E latency: app repo commit → pods ready (usage: argocd|flux)
-    measure_e2e_jenkins.sh  — full E2E latency: app repo commit → pods ready (Jenkins)
+    measure_e2e.sh          — full E2E latency: app repo commit → pods ready (usage: argocd|flux|jenkins)
     results/                — CSV output, one file per day per stack
   reference/                — scripts moved here pending verification; not used in the current test run
 old/
@@ -185,7 +184,7 @@ For Jenkins setup refer to `jenkins/vm/instructions.md`
 - [x] GitHub Actions CI pipeline wired up (POST trigger after image tag commit)
 
 #### Measurement scripts
-- [x] E2E deployment (active) — `measure_e2e.sh <argocd|flux>` / `measure_e2e_jenkins.sh`: app repo commit → pods ready (full pipeline latency)
+- [x] E2E deployment (active) — `measure_e2e.sh <argocd|flux|jenkins>`: app repo commit → pods ready (full pipeline latency)
 - [ ] CD latency (reference) — `reference/cd-deployment/`: git-ops-lab commit → pods ready; pending verification
 - [ ] Self-healing latency (reference) — `reference/self-healing/`: replica drift → reaction and recovery time; pending verification
 - [ ] Resource consumption (reference) — `reference/resource-consumption/`: pod CPU/memory via kubectl top or SSH; pending verification

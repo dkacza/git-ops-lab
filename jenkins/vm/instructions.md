@@ -54,7 +54,13 @@ pipeline {
     stage('Deploy') {
       steps {
         withCredentials([file(credentialsId: 'aks-kubeconfig', variable: 'KUBECONFIG')]) {
-          sh 'rm -rf /tmp/git-ops-lab && git clone https://github.com/dkacza/git-ops-lab /tmp/git-ops-lab'
+          sh '''
+            if [ -d /tmp/git-ops-lab/.git ]; then
+              git -C /tmp/git-ops-lab fetch origin main -q && git -C /tmp/git-ops-lab reset --hard origin/main
+            else
+              git clone https://github.com/dkacza/git-ops-lab /tmp/git-ops-lab
+            fi
+          '''
           sh 'kubectl apply -f /tmp/git-ops-lab/jenkins/manifests/'
         }
       }

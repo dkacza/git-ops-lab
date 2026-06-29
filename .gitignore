@@ -4,6 +4,7 @@ argo-cd/argo-cd-webhook-secret.txt
 flux/flux-webhook-token.txt
 
 jenkins/jenkins-api-token.txt
+jenkins/jenkins-admin-password.txt
 jenkins/aks-kubeconfig
 
 presentation/*

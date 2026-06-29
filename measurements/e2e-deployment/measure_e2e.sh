@@ -2,13 +2,13 @@
 set -euo pipefail
 
 if [[ $# -lt 2 ]]; then
-    echo "Usage: $0 <argocd|flux> <path-to-budget-tracker-repo> [-n <count>]" >&2
+    echo "Usage: $0 <argocd|flux|jenkins> <path-to-budget-tracker-repo> [-n <count>]" >&2
     exit 1
 fi
 
 TOOL="$1"
-if [[ "$TOOL" != "argocd" && "$TOOL" != "flux" ]]; then
-    echo "[ERROR] Unknown tool '$TOOL'. Use 'argocd' or 'flux'." >&2
+if [[ "$TOOL" != "argocd" && "$TOOL" != "flux" && "$TOOL" != "jenkins" ]]; then
+    echo "[ERROR] Unknown tool '$TOOL'. Use 'argocd', 'flux', or 'jenkins'." >&2
     exit 1
 fi
 
@@ -102,7 +102,7 @@ for i in $(seq 1 "$COUNT"); do
     done
 
     if [[ "$SYNCED" != "true" ]]; then
-        echo "[ERROR] Sync timeout after ${SYNC_TIMEOUT}s — $TOOL may not have synced. Check webhook configuration." >&2
+        echo "[ERROR] Sync timeout after ${SYNC_TIMEOUT}s — $TOOL may not have synced. Check webhook/pipeline configuration." >&2
         exit 1
     fi
 
