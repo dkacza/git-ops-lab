@@ -45,9 +45,26 @@ git -C "$REPO_ROOT" pull
 echo "==> Waiting for Flux pods to be ready (timeout: 120s)..."
 kubectl wait --for=condition=Ready pods --all -n flux-system --timeout=120s
 
-echo "==> Exposing webhook-receiver via LoadBalancer (static IP: $STATIC_IP)..."
-kubectl patch svc webhook-receiver -n flux-system \
-  -p "{\"spec\": {\"type\": \"LoadBalancer\", \"loadBalancerIP\": \"$STATIC_IP\"}}"
+echo "==> Writing webhook-receiver LoadBalancer patch into repo..."
+cat > "$REPO_ROOT/flux/clusters/aks/flux-system/webhook-receiver-svc-patch.yaml" <<EOF
+apiVersion: v1
+kind: Service
+metadata:
+  name: webhook-receiver
+  namespace: flux-system
+spec:
+  type: LoadBalancer
+  loadBalancerIP: $STATIC_IP
+EOF
+
+git -C "$REPO_ROOT" add flux/clusters/aks/flux-system/webhook-receiver-svc-patch.yaml \
+  flux/clusters/aks/flux-system/kustomization.yaml
+git -C "$REPO_ROOT" commit -m "ci: assign static IP to webhook-receiver LoadBalancer"
+git -C "$REPO_ROOT" push
+
+echo "==> Triggering immediate Flux reconciliation..."
+flux reconcile source git flux-system
+flux reconcile kustomization flux-system
 
 echo "==> Waiting for external IP assignment..."
 EXTERNAL_IP=""

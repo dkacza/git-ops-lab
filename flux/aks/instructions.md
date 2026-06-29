@@ -16,7 +16,7 @@ export GITHUB_TOKEN=<PAT_WITH_REPO_SCOPE>
 
 ## Installing Flux
 
-Run `install-flux-aks.sh` with `GITHUB_TOKEN` exported — it creates the `gitops-tool-public-ip` static IP, bootstraps Flux onto the cluster (committing the `flux-system` manifests to this repo), configures the webhook receiver, and prints the GitHub webhook registration details.
+Run `install-flux-aks.sh` with `GITHUB_TOKEN` exported — it creates the `gitops-tool-public-ip` static IP, bootstraps Flux onto the cluster (committing the `flux-system` manifests to this repo), writes the static IP into `flux/clusters/aks/flux-system/webhook-receiver-svc-patch.yaml` and commits it so Flux manages the LoadBalancer assignment durably, configures the webhook receiver, and prints the GitHub webhook registration details.
 
 ## Uninstalling Flux
 
