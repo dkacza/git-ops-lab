@@ -1,6 +1,18 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+if [[ $# -lt 1 ]]; then
+    echo "Usage: $0 <argocd|flux> [-n <count>]" >&2
+    exit 1
+fi
+
+TOOL="$1"
+if [[ "$TOOL" != "argocd" && "$TOOL" != "flux" ]]; then
+    echo "[ERROR] Unknown tool '$TOOL'. Use 'argocd' or 'flux'." >&2
+    exit 1
+fi
+shift
+
 COUNT=1
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -12,7 +24,7 @@ done
 NAMESPACE="budget-tracker"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-MANIFESTS_DIR="$REPO_ROOT/flux/manifests"
+MANIFESTS_DIR="$REPO_ROOT/$( [[ "$TOOL" == "argocd" ]] && echo "argo-cd" || echo "$TOOL" )/manifests"
 RESULTS_DIR="$SCRIPT_DIR/results"
 
 BAD_TAG="sha-badbeef000"
@@ -26,7 +38,7 @@ echo "[INFO] Pre-flight: checking cluster connectivity..."
 kubectl cluster-info > /dev/null
 
 mkdir -p "$RESULTS_DIR"
-RESULTS_FILE="$RESULTS_DIR/flux-failed-detection-$(date +%Y%m%d).csv"
+RESULTS_FILE="$RESULTS_DIR/${TOOL}-failed-detection-$(date +%Y%m%d).csv"
 if [[ ! -f "$RESULTS_FILE" ]]; then
     echo "run,timestamp_utc,bad_tag,t_start,t_end,detection_seconds" > "$RESULTS_FILE"
 fi
@@ -60,8 +72,8 @@ for i in $(seq 1 "$COUNT"); do
     T_START=$(git -C "$REPO_ROOT" log -1 --format="%ct")
     echo "[INFO] T_start: $(date -u -r "$T_START" +%Y-%m-%dT%H:%M:%SZ)"
 
-    # Wait for Flux to apply the bad manifest
-    echo "[INFO] Waiting for Flux to sync bad manifest..."
+    # Wait for the CD tool to apply the bad manifest
+    echo "[INFO] Waiting for $TOOL to sync bad manifest..."
     SYNCED=false
     DEADLINE=$(($(date +%s) + SYNC_TIMEOUT))
     while [[ $(date +%s) -lt $DEADLINE ]]; do
@@ -74,7 +86,7 @@ for i in $(seq 1 "$COUNT"); do
     done
 
     if [[ "$SYNCED" != "true" ]]; then
-        echo "[ERROR] Sync timeout after ${SYNC_TIMEOUT}s — Flux did not apply the manifest. Check webhook configuration." >&2
+        echo "[ERROR] Sync timeout after ${SYNC_TIMEOUT}s — $TOOL did not apply the manifest. Check webhook configuration." >&2
         exit 1
     fi
 
