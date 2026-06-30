@@ -5,4 +5,4 @@ metadata:
   namespace: flux-system
 spec:
   type: LoadBalancer
-  loadBalancerIP: 20.215.188.159
+  loadBalancerIP: 74.248.36.23
