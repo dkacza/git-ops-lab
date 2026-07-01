@@ -188,7 +188,7 @@ For Jenkins setup refer to `jenkins/vm/instructions.md`
 - [ ] CD latency (reference) — `reference/cd-deployment/`: git-ops-lab commit → pods ready; pending verification
 - [ ] Self-healing latency (reference) — `reference/self-healing/`: replica drift → reaction and recovery time; pending verification
 - [ ] Resource consumption (reference) — `reference/resource-consumption/`: pod CPU/memory via kubectl top or SSH; pending verification
-- [ ] Failure recovery (reference) — `reference/failure-recovery/`: pod restart time (Argo CD, Flux) or systemd service restart time (Jenkins); pending verification
+- [x] Failure recovery (active) — `failure-recovery/measure_failure_recovery.sh <argocd|flux>` (pod delete → all-Ready) and `failure-recovery/measure_failure_recovery_jenkins.sh <vm-ip>` (systemd stop/start → HTTP 200)
 
 
 ### Software Versions:
