@@ -1,0 +1,7 @@
+run,timestamp_utc,from_tag,to_tag,duration_seconds
+1,2026-07-03T13:33:42Z,sha-43c2c77,sha-00c452c,10
+2,2026-07-03T13:34:24Z,sha-00c452c,sha-ee9dff6,10
+3,2026-07-03T13:35:08Z,sha-ee9dff6,sha-00c452c,13
+4,2026-07-03T13:35:48Z,sha-00c452c,sha-ee9dff6,9
+5,2026-07-03T13:36:32Z,sha-ee9dff6,sha-00c452c,13
+6,2026-07-03T13:37:15Z,sha-00c452c,sha-ee9dff6,12

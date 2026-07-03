@@ -1,6 +1,20 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+if [[ $# -lt 1 ]]; then
+    echo "Usage: $0 <argocd|flux|jenkins> [-n <count>]" >&2
+    exit 1
+fi
+
+TOOL="$1"
+case "$TOOL" in
+    argocd)  MANIFESTS_SUBDIR="argo-cd/manifests" ;;
+    flux)    MANIFESTS_SUBDIR="flux/manifests" ;;
+    jenkins) MANIFESTS_SUBDIR="jenkins/manifests" ;;
+    *) echo "[ERROR] Unknown tool '$TOOL'. Use 'argocd', 'flux', or 'jenkins'." >&2; exit 1 ;;
+esac
+shift 1
+
 COUNT=1
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -12,7 +26,7 @@ done
 NAMESPACE="budget-tracker"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-MANIFESTS_DIR="$REPO_ROOT/flux/manifests"
+MANIFESTS_DIR="$REPO_ROOT/$MANIFESTS_SUBDIR"
 RESULTS_DIR="$SCRIPT_DIR/results"
 
 TAG_A="sha-00c452c"
@@ -26,7 +40,7 @@ echo "[INFO] Pre-flight: checking cluster connectivity..."
 kubectl cluster-info > /dev/null
 
 mkdir -p "$RESULTS_DIR"
-RESULTS_FILE="$RESULTS_DIR/flux-cd-$(date +%Y%m%d).csv"
+RESULTS_FILE="$RESULTS_DIR/${TOOL}-cd-$(date +%Y%m%d).csv"
 if [[ ! -f "$RESULTS_FILE" ]]; then
     echo "run,timestamp_utc,from_tag,to_tag,duration_seconds" > "$RESULTS_FILE"
 fi
@@ -64,22 +78,24 @@ for i in $(seq 1 "$COUNT"); do
     T_START=$(git -C "$REPO_ROOT" log -1 --format="%ct")
     echo "[INFO] T_start: $(date -u -r "$T_START" +%Y-%m-%dT%H:%M:%SZ)"
 
-    # Wait for Flux to apply the new manifests (generation must increase on both deployments)
-    echo "[INFO] Waiting for Flux to sync..."
-    ELAPSED=0
-    while true; do
+    # Wait for the CD tool to apply the new manifests (generation must increase on both deployments)
+    echo "[INFO] Waiting for $TOOL to sync..."
+    SYNCED=false
+    DEADLINE=$(($(date +%s) + SYNC_TIMEOUT))
+    while [[ $(date +%s) -lt $DEADLINE ]]; do
         GEN_B=$(kubectl get deployment backend  -n "$NAMESPACE" -o jsonpath='{.metadata.generation}')
         GEN_F=$(kubectl get deployment frontend -n "$NAMESPACE" -o jsonpath='{.metadata.generation}')
         if [[ "$GEN_B" -gt "$PRE_GEN_BACKEND" ]] && [[ "$GEN_F" -gt "$PRE_GEN_FRONTEND" ]]; then
+            SYNCED=true
             break
         fi
-        sleep 2
-        ELAPSED=$((ELAPSED + 2))
-        if [[ $ELAPSED -ge $SYNC_TIMEOUT ]]; then
-            echo "[ERROR] Sync timeout after ${SYNC_TIMEOUT}s — Flux may not have synced. Check webhook configuration." >&2
-            exit 1
-        fi
+        sleep 0.25
     done
+
+    if [[ "$SYNCED" != "true" ]]; then
+        echo "[ERROR] Sync timeout after ${SYNC_TIMEOUT}s — $TOOL may not have synced. Check webhook configuration." >&2
+        exit 1
+    fi
 
     # Wait for both rollouts to complete
     echo "[INFO] Sync detected. Waiting for rollout to complete..."
