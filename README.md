@@ -95,6 +95,9 @@ This lab uses a two-repo GitOps setup:
 aks/
   provision-aks.sh         — provisions AKS cluster (shared across all stacks)
   deprovision-aks.sh       — tears down the resource group and all resources
+monitoring/
+  install-monitoring.sh    — installs kube-prometheus-stack (Prometheus + Grafana); run once after provision-aks.sh, before any stack install
+  uninstall-monitoring.sh  — removes the monitoring stack; run before deprovision-aks.sh
 credentials.md             — inventory of all secrets and tokens across all stacks
 argo-cd/
   application.yaml        — Argo CD Application CRD
@@ -143,6 +146,9 @@ measurements/
   e2e-deployment/           — active measurement scripts
     measure_e2e.sh          — full E2E latency: app repo commit → pods ready (usage: argocd|flux|jenkins)
     results/                — CSV output, one file per day per stack
+  self-healing/             — active measurement scripts
+    measure_self_healing.sh — replica drift → reaction and recovery time (usage: argocd|flux)
+    results/                — CSV output, one file per day per stack
   reference/                — scripts moved here pending verification; not used in the current test run
 old/
   README-rancher.md       — original README from the local Rancher Desktop setup
@@ -186,7 +192,7 @@ For Jenkins setup refer to `jenkins/vm/instructions.md`
 #### Measurement scripts
 - [x] E2E deployment (active) — `measure_e2e.sh <argocd|flux|jenkins>`: app repo commit → pods ready (full pipeline latency)
 - [ ] CD latency (reference) — `reference/cd-deployment/`: git-ops-lab commit → pods ready; pending verification
-- [ ] Self-healing latency (reference) — `reference/self-healing/`: replica drift → reaction and recovery time; pending verification
+- [ ] Self-healing latency (active) — `self-healing/measure_self_healing.sh <argocd|flux>`: replica drift → reaction and recovery time
 - [ ] Resource consumption (reference) — `reference/resource-consumption/`: pod CPU/memory via kubectl top or SSH; pending verification
 - [x] Failure recovery (active) — `failure-recovery/measure_failure_recovery.sh <argocd|flux>` (pod delete → all-Ready) and `failure-recovery/measure_failure_recovery_jenkins.sh <vm-ip>` (systemd stop/start → HTTP 200)
 
@@ -202,6 +208,7 @@ For Jenkins setup refer to `jenkins/vm/instructions.md`
 - Jenkins runs on a separate Azure VM (Standard_B2s) — resource and failure-recovery measurements use VM process metrics (SSH + `ps`) rather than `kubectl top`. JVM heap capped at 512m for comparability. This architectural difference is intentional and documented in the thesis.
 
 ## Change Log
+- *04.07.2026* - Prometheus + Grafana (kube-prometheus-stack) added as a dedicated monitoring layer, installed via `monitoring/install-monitoring.sh` after cluster provisioning and before any CD stack. Kept outside GitOps control deliberately — having the measured tool reconcile its own observer would couple monitoring lifecycle to the stack under test and risk losing metrics across stack switches.
 - *24.06.2026* - Static IP lifecycle moved out of `provision-aks.sh` and into the per-stack install scripts. `install-argocd-aks.sh` and `install-flux-aks.sh` now create `gitops-tool-public-ip` on install; new `uninstall-argocd-aks.sh` and `uninstall-flux-aks.sh` scripts delete it on teardown. This ensures the IP slot is only consumed while a pull-based stack is active, leaving room for the Jenkins frontend LoadBalancer within the 3-IP subscription limit.
 - *24.04.2026* - Failed deployment detection time metric scrapped. Argo CD's `Degraded` health status for a failed rollout is derived directly from Kubernetes's `ProgressDeadlineExceeded` condition, which fires after `progressDeadlineSeconds`. The measured value would equal that parameter regardless of which GitOps tool is used — it is not attributable to the CD tool. The qualitative difference (GitOps tools surface failures automatically; Jenkins requires explicit post-deploy verification in the pipeline) will be noted in the thesis without a latency measurement.
 - *22.04.2026* - Rollback time metric scrapped. Via git revert the measurement is structurally identical to the E2E CD latency already captured by `measure_cd.sh` — both are a git-ops-lab commit followed by Argo CD sync and pod rollover. The only meaningfully different rollback path (Argo CD native `argocd app rollback`) is not comparable across stacks. The thesis will treat rollback as a qualitative process difference: GitOps rollback is a git revert (auditable, PR-reviewable), Jenkins rollback requires re-triggering the full CI pipeline.
