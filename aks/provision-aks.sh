@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+K8S_VERSION="1.31"
 
 echo "==> Logging in to Azure..."
 az login
@@ -8,10 +9,11 @@ az account set --subscription 0ca6e150-1b48-4fed-84f7-345fb546ccc9
 echo "==> Creating resource group..."
 az group create --name gitops-lab-rg --location polandcentral
 
-echo "==> Provisioning AKS cluster (~10 min)..."
+echo "==> Provisioning AKS cluster (~10 min, Kubernetes $K8S_VERSION)..."
 az aks create \
   --resource-group gitops-lab-rg \
   --name gitops-lab-aks \
+  --kubernetes-version "$K8S_VERSION" \
   --node-count 1 \
   --node-vm-size standard_b2as_v2 \
   --generate-ssh-keys

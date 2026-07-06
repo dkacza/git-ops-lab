@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+KUBE_PROMETHEUS_STACK_VERSION="87.10.1"
 
 echo "==> Checking cluster connectivity..."
 kubectl cluster-info --request-timeout=5s > /dev/null
@@ -11,9 +12,10 @@ helm repo update prometheus-community
 echo "==> Creating monitoring namespace..."
 kubectl create namespace monitoring --dry-run=client -o yaml | kubectl apply -f -
 
-echo "==> Installing kube-prometheus-stack..."
+echo "==> Installing kube-prometheus-stack ($KUBE_PROMETHEUS_STACK_VERSION)..."
 helm upgrade --install monitoring prometheus-community/kube-prometheus-stack \
   --namespace monitoring \
+  --version "$KUBE_PROMETHEUS_STACK_VERSION" \
   --set prometheus.prometheusSpec.scrapeInterval=15s \
   --set prometheus.prometheusSpec.resources.requests.cpu=50m \
   --set prometheus.prometheusSpec.resources.requests.memory=256Mi \

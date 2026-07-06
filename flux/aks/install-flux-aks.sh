@@ -3,6 +3,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+FLUX_VERSION="v2.9.0"
 
 echo "==> Checking cluster connectivity..."
 kubectl cluster-info --request-timeout=5s > /dev/null
@@ -31,8 +32,16 @@ STATIC_IP=$(az network public-ip show \
   --query ipAddress -o tsv)
 echo "    Static IP: $STATIC_IP"
 
-echo "==> Bootstrapping Flux..."
+echo "==> Checking flux CLI version..."
+CLI_VERSION=$(flux --version 2>/dev/null | awk '{print $NF}')
+if [[ "$CLI_VERSION" != "$FLUX_VERSION" ]]; then
+  echo "[WARN] Local flux CLI is $CLI_VERSION but this lab pins $FLUX_VERSION." >&2
+  echo "       Install matching version: https://fluxcd.io/flux/installation/ (e.g. brew install fluxcd/tap/flux)." >&2
+fi
+
+echo "==> Bootstrapping Flux ($FLUX_VERSION)..."
 flux bootstrap github \
+  --version="$FLUX_VERSION" \
   --owner=dkacza \
   --repository=git-ops-lab \
   --branch=main \

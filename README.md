@@ -210,10 +210,13 @@ For Jenkins setup refer to `jenkins/vm/instructions.md`
 
 
 ### Software Versions:
-- AKS: 1.31
-- Argo CD: 3.3.6
-- Flux: 2.8.6
-- Jenkins: LTS (version recorded after first provisioning)
+Pinned in the install scripts for reproducibility. Bump in both places (script + this section) to change.
+
+- AKS Kubernetes: **1.31** (`aks/provision-aks.sh`)
+- Argo CD: **v3.4.4** (`argo-cd/aks/install-argocd-aks.sh`)
+- Flux: **v2.9.0** (`flux/aks/install-flux-aks.sh`; requires matching `flux` CLI locally)
+- Jenkins LTS: **2.555.3** (`jenkins/vm/install-jenkins.sh`, held via `apt-mark hold`)
+- kube-prometheus-stack (Helm chart): **87.10.1** (`monitoring/install-monitoring.sh`)
 
 ### Constraints
 - Single-node cluster — node-failover scenarios are out of scope

@@ -2,6 +2,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ARGOCD_VERSION="v3.4.4"
 
 echo "==> Checking cluster connectivity..."
 kubectl cluster-info --request-timeout=5s > /dev/null
@@ -28,9 +29,9 @@ echo "    Static IP: $STATIC_IP"
 echo "==> Creating argocd namespace..."
 kubectl create namespace argocd --dry-run=client -o yaml | kubectl apply -f -
 
-echo "==> Installing Argo CD..."
+echo "==> Installing Argo CD ($ARGOCD_VERSION)..."
 kubectl apply -n argocd --server-side --force-conflicts \
-  -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+  -f "https://raw.githubusercontent.com/argoproj/argo-cd/$ARGOCD_VERSION/manifests/install.yaml"
 
 echo "==> Waiting for Argo CD pods to be ready (timeout: 120s)..."
 kubectl wait --for=condition=Ready pods --all -n argocd --timeout=120s
