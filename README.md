@@ -38,22 +38,22 @@ Time from a git commit to both application pods passing their readiness probes. 
 Time for the CD tool to detect and revert a configuration drift introduced directly on the cluster. Pull-based tools (Argo CD, Flux) reconcile continuously against the git state. Jenkins has no equivalent — drift is not detected or corrected without a manual pipeline re-run.
 
 #### Resource consumption *(quantitative)*
-CPU and memory footprint of the CD tool sampled at 250ms intervals across three scenarios: idle, active sync, and self-healing. Jenkins carries a significantly larger baseline footprint due to the JVM.
+CPU and memory footprint of the CD tool sampled during idle and sync scenarios.
 
 #### Failure recovery *(quantitative)*
 Time for the CD tool to recover after all its pods are deleted. All tools are deployed as Kubernetes-native workloads, so pod restart is handled by the scheduler; the measured value reflects container startup and initialisation time.
 
-#### Synchronisation latency *(qualitative)*
-With webhooks configured, pull-based tools (Argo CD, Flux) detect git changes near-instantaneously — the latency is GitHub webhook delivery time, not tool behaviour. Without webhooks they fall back to polling (Argo CD default: 3 min, Flux default: 1 min). Jenkins is push-based and triggers immediately on git push regardless of webhook configuration. Not measured quantitatively as the value would reflect network round-trip to the AKS cluster, not the CD tool itself.
+#### Failed deployment detection *(quantitative — pull-based only)*
+Time from a bad image tag being committed to the CD tool surfacing the failure (pod in `ImagePullBackOff` / `ErrImagePull`). Pull-based tools reflect the failure in their dashboards without any pipeline changes; Jenkins would require explicit post-deploy verification steps in the pipeline to expose the same signal. The measured value is bounded from below by Kubernetes's own scheduling and pull-retry loop, but the *surfacing* is attributable to the CD tool.
 
 #### Rollback process *(qualitative)*
 GitOps rollback is a `git revert` commit — auditable, PR-reviewable, and processed by the CD tool identically to any other commit. Jenkins rollback requires re-triggering the full CI pipeline with a previous artifact version; there is no built-in audit trail and the pipeline must be written to support it explicitly.
 
-#### Failed deployment detection *(qualitative)*
-Pull-based tools automatically surface deployment failures (e.g. bad image tag → `ImagePullBackOff` → `Degraded` health status) in their dashboards without any pipeline changes. Jenkins requires explicit post-deploy verification steps in the pipeline; failures are only visible if the pipeline checks for them. Not measured quantitatively as the detection time is determined by Kubernetes's `progressDeadlineSeconds` parameter, not the CD tool.
-
 #### Operational complexity *(qualitative)*
 Described in terms of configuration steps, required credentials, and cluster access model. Pull-based tools operate entirely from within the cluster and require only read access to the git repository — no inbound credentials need to be stored in the CI system. Jenkins requires cluster credentials (kubeconfig or service account token) to be stored in the CI environment, widening the secret surface area.
+
+#### Security
+Tool's ability to withstand various kinds of attack.
 
 ## Application
 A minimal two-service web application used as the deployment target across all three stacks.
@@ -111,9 +111,6 @@ argo-cd/
     instructions.md         — AKS cluster setup guide
     install-argocd-aks.sh   — creates static IP, installs Argo CD, configures webhook
     uninstall-argocd-aks.sh — removes Argo CD and deletes static IP
-  local/
-    instructions.md         — local cluster setup guide
-    install-argo-local.sh   — installs Argo CD on local cluster with port-forward
 flux/
   manifests/              — Kubernetes manifests watched by Flux
     namespace.yaml
@@ -143,13 +140,27 @@ jenkins/
     deprovision-jenkins-vm.sh   — deletes Jenkins VM and its public IP
     instructions.md             — VM setup guide and GitHub Actions wiring instructions
 measurements/
-  e2e-deployment/           — active measurement scripts
-    measure_e2e.sh          — full E2E latency: app repo commit → pods ready (usage: argocd|flux|jenkins)
+  cd-deployment/            — CD latency: git-ops-lab commit → pods ready
+    measure_cd.sh           — argocd|flux (commits image-tag flip directly)
+    measure_cd_jenkins.sh   — jenkins (commits image-tag flip, then triggers Jenkins job via API)
     results/                — CSV output, one file per day per stack
-  self-healing/             — active measurement scripts
-    measure_self_healing.sh — replica drift → reaction and recovery time (usage: argocd|flux)
-    results/                — CSV output, one file per day per stack
-  reference/                — scripts moved here pending verification; not used in the current test run
+  e2e-deployment/           — E2E latency: app repo commit → pods ready
+    measure_e2e.sh          — argocd|flux|jenkins
+    results/
+  self-healing/             — replica drift → reaction + recovery time
+    measure_self_healing.sh — argocd|flux
+    results/
+  failure-recovery/         — CD-tool pod delete (or Jenkins systemd stop) → back to Ready
+    measure_failure_recovery.sh          — argocd|flux
+    measure_failure_recovery_jenkins.sh  — jenkins (SSH + systemctl)
+    results/
+  failed-detection/         — bad image tag → pod in ImagePullBackOff surfaced by CD tool
+    measure_failed_detection.sh — argocd|flux
+    results/
+  resource-consumption/     — CPU / memory sampling of the CD process
+    measure_resources_jenkins.sh — jenkins (SSH + ps, since Jenkins is on a VM)
+    render_graph.py               — plots CPU + memory PNGs from a results CSV
+    results/
 old/
   README-rancher.md       — original README from the local Rancher Desktop setup
 ```
@@ -190,11 +201,12 @@ For Jenkins setup refer to `jenkins/vm/instructions.md`
 - [x] GitHub Actions CI pipeline wired up (POST trigger after image tag commit)
 
 #### Measurement scripts
-- [x] E2E deployment (active) — `measure_e2e.sh <argocd|flux|jenkins>`: app repo commit → pods ready (full pipeline latency)
-- [ ] CD latency (reference) — `reference/cd-deployment/`: git-ops-lab commit → pods ready; pending verification
-- [ ] Self-healing latency (active) — `self-healing/measure_self_healing.sh <argocd|flux>`: replica drift → reaction and recovery time
-- [ ] Resource consumption (reference) — `reference/resource-consumption/`: pod CPU/memory via kubectl top or SSH; pending verification
-- [x] Failure recovery (active) — `failure-recovery/measure_failure_recovery.sh <argocd|flux>` (pod delete → all-Ready) and `failure-recovery/measure_failure_recovery_jenkins.sh <vm-ip>` (systemd stop/start → HTTP 200)
+- [x] E2E deployment — `e2e-deployment/measure_e2e.sh <argocd|flux|jenkins>`: app repo commit → pods ready (full pipeline latency)
+- [x] CD latency — `cd-deployment/measure_cd.sh <argocd|flux>` and `cd-deployment/measure_cd_jenkins.sh <vm-ip>`: git-ops-lab commit → pods ready
+- [x] Self-healing latency — `self-healing/measure_self_healing.sh <argocd|flux> -s <settle_seconds>`: replica drift → reaction and recovery time
+- [x] Failure recovery — `failure-recovery/measure_failure_recovery.sh <argocd|flux>` (pod delete → all-Ready) and `failure-recovery/measure_failure_recovery_jenkins.sh <vm-ip>` (systemd stop/start → HTTP 200)
+- [x] Failed deployment detection — `failed-detection/measure_failed_detection.sh <argocd|flux>`: bad image tag committed → pod in ImagePullBackOff
+- [x] Resource consumption — `resource-consumption/measure_resources_jenkins.sh <vm-ip>` (SSH + ps for the JVM); Argo CD / Flux equivalents are sampled via `kubectl top` on the in-cluster pods. `render_graph.py` plots CPU + memory from the resulting CSV.
 
 
 ### Software Versions:
@@ -210,7 +222,6 @@ For Jenkins setup refer to `jenkins/vm/instructions.md`
 ## Change Log
 - *04.07.2026* - Prometheus + Grafana (kube-prometheus-stack) added as a dedicated monitoring layer, installed via `monitoring/install-monitoring.sh` after cluster provisioning and before any CD stack. Kept outside GitOps control deliberately — having the measured tool reconcile its own observer would couple monitoring lifecycle to the stack under test and risk losing metrics across stack switches.
 - *24.06.2026* - Static IP lifecycle moved out of `provision-aks.sh` and into the per-stack install scripts. `install-argocd-aks.sh` and `install-flux-aks.sh` now create `gitops-tool-public-ip` on install; new `uninstall-argocd-aks.sh` and `uninstall-flux-aks.sh` scripts delete it on teardown. This ensures the IP slot is only consumed while a pull-based stack is active, leaving room for the Jenkins frontend LoadBalancer within the 3-IP subscription limit.
-- *24.04.2026* - Failed deployment detection time metric scrapped. Argo CD's `Degraded` health status for a failed rollout is derived directly from Kubernetes's `ProgressDeadlineExceeded` condition, which fires after `progressDeadlineSeconds`. The measured value would equal that parameter regardless of which GitOps tool is used — it is not attributable to the CD tool. The qualitative difference (GitOps tools surface failures automatically; Jenkins requires explicit post-deploy verification in the pipeline) will be noted in the thesis without a latency measurement.
 - *22.04.2026* - Rollback time metric scrapped. Via git revert the measurement is structurally identical to the E2E CD latency already captured by `measure_cd.sh` — both are a git-ops-lab commit followed by Argo CD sync and pod rollover. The only meaningfully different rollback path (Argo CD native `argocd app rollback`) is not comparable across stacks. The thesis will treat rollback as a qualitative process difference: GitOps rollback is a git revert (auditable, PR-reviewable), Jenkins rollback requires re-triggering the full CI pipeline.
 - *22.04.2026* - Synchronisation latency metric scrapped. With webhooks configured on both pull-based stacks, the measured value reflects GitHub's webhook delivery latency (network round-trip to AKS Poland Central), not CD tool behaviour. Argo CD and Flux would produce near-identical results with no tool-attributable signal. To be noted in the thesis as a qualitative observation: pull-based tools achieve near-instantaneous detection when webhooks are configured.
 - *21.04.2026* - Due to the fact that the webhooks are not available on the local environment switch to Azure AKS has been made.

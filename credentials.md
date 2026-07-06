@@ -64,4 +64,4 @@ These files are gitignored and exist only on disk. They are backups or outputs o
 | `jenkins/jenkins-admin-password.txt` | Jenkins initial admin password |
 | `jenkins/jenkins-api-token.txt` | Jenkins API token for GitHub Actions |
 | `jenkins/aks-kubeconfig` | Kubeconfig with `jenkins-deployer` ServiceAccount token |
-| `personal-access-token.txt` | PAT used as `GIT_OPS_LAB_PAT` — rotate here and update the GitHub secret when it expires |
+| `GitHub-PAT.txt` | PAT used as `GIT_OPS_LAB_PAT` — rotate here and update the GitHub secret when it expires |
