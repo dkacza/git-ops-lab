@@ -86,6 +86,32 @@ Application source code available at: https://github.com/dkacza/budget-tracker
 #### Kubernetes namespace
 All resources are deployed to the `budget-tracker` namespace.
 
+## Prerequisites
+
+Everything below runs from a developer laptop against remote Azure resources — no local Kubernetes cluster is needed. Tools required on the operator's machine:
+
+#### Cloud & cluster access
+- **Azure CLI** (`az`) — authenticated against a subscription that owns `gitops-lab-rg`. Tested with 2.60+.
+- **kubectl** — matched to the pinned AKS version (`1.31`). Install via `az aks install-cli` or Homebrew.
+- **Helm** (`helm`) — v3.x. Used only by `monitoring/install-monitoring.sh`.
+
+#### Stack-specific CLIs
+- **argocd** — matched to the pinned Argo CD version (`v3.4.4`). `brew install argocd`. Used by `install-argocd-aks.sh` to log in and by the operator for ad-hoc queries.
+- **flux** — matched to the pinned Flux version (`v2.9.0`). `brew install fluxcd/tap/flux`. The install script warns if the local CLI version drifts from the pin.
+
+#### General shell tooling
+Standard on macOS/Linux and assumed to be on `PATH`: `bash` (≥4), `git`, `curl`, `openssl`, `ssh`, `scp`, `sed`, `awk`, `grep`, `base64`, `date`, `bc`.
+
+- **Python 3** (≥3.9) — used inline by the Jenkins measurement scripts (JSON parsing of the Jenkins API) and by `measurements/resource-consumption/render_graph.py`.
+- **matplotlib** — only for the chart renderer: `pip3 install matplotlib`.
+
+#### Credentials
+- Azure account with rights to create resource groups, AKS clusters, and public IPs in `polandcentral`.
+- GitHub PAT with `repo` scope — exported as `GITHUB_TOKEN` for `flux bootstrap`, and stored in `GitHub-PAT.txt` for the budget-tracker CI to check out this repo. See `credentials.md` for the full inventory.
+
+#### Note on macOS vs Linux
+Measurement scripts use `sed -i ''` (BSD sed syntax). On Linux, replace with `sed -i` — or use `gsed` on macOS if you prefer GNU sed uniformly. Not currently abstracted.
+
 ## Repository structure
 
 This lab uses a two-repo GitOps setup:
