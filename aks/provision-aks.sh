@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-K8S_VERSION="1.31"
+K8S_VERSION="1.33"
 
 echo "==> Logging in to Azure..."
 az login
