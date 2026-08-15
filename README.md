@@ -1,11 +1,11 @@
-## Topic:
-Comparative analysis of selected CI/CD tools in terms of functionality, performance, and integration with modern development environments 
+## Thesis title:
+Comparative analysis of selected continuous deployment tools in terms of functionality, performance, and integration with modern development environments
 
 ## Stacks to compare
-The main goal of the thesis is to compare the GitOps tools.
-As a supplement these will also be compared to the traditional Jenkins setup in order to highlight their advantages.
+The main goal of the thesis is to compare selected continuous deployment tools used in modern development environments.
+The comparison covers pull-based GitOps tools (Argo CD and Flux) and a traditional push-based Jenkins deployment setup in order to highlight functional, performance, and integration differences.
 
-All the tools will use the same CI tool in order to ensure the quality of results.
+All compared stacks use the same CI stage in order to isolate the continuous deployment tool as the main variable and ensure the quality of results.
 
 #### Stack 1
 GitHub Actions
@@ -114,9 +114,9 @@ Measurement scripts use `sed -i ''` (BSD sed syntax). On Linux, replace with `se
 
 ## Repository structure
 
-This lab uses a two-repo GitOps setup:
+This lab uses a two-repo deployment setup:
 
-**`git-ops-lab`** (this repo) — config repo; the desired cluster state that CD tools reconcile against.
+**`git-ops-lab`** (this repo) — config repo; the desired cluster state used by the selected CD tools.
 ```
 aks/
   provision-aks.sh         — provisions AKS cluster (shared across all stacks)
