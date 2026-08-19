@@ -2,13 +2,13 @@
 set -euo pipefail
 
 if [[ $# -lt 1 ]]; then
-    echo "Usage: $0 <argocd|flux> [-n <count>] -s <settle_seconds>" >&2
+    echo "Usage: $0 <argocd|flux|jenkins> [-n <count>] -s <settle_seconds>" >&2
     exit 1
 fi
 
 TOOL="$1"
-if [[ "$TOOL" != "argocd" && "$TOOL" != "flux" ]]; then
-    echo "[ERROR] Unknown tool '$TOOL'. Use 'argocd' or 'flux'." >&2
+if [[ "$TOOL" != "argocd" && "$TOOL" != "flux" && "$TOOL" != "jenkins" ]]; then
+    echo "[ERROR] Unknown tool '$TOOL'. Use 'argocd', 'flux', or 'jenkins'." >&2
     exit 1
 fi
 shift 1
@@ -24,7 +24,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ -z "$SETTLE_SECONDS" ]]; then
-    echo "Usage: $0 <argocd|flux> [-n <count>] -s <settle_seconds>" >&2
+    echo "Usage: $0 <argocd|flux|jenkins> [-n <count>] -s <settle_seconds>" >&2
     exit 1
 fi
 
@@ -44,6 +44,11 @@ kubectl cluster-info > /dev/null
 # near-zero reaction time (the in-flight apply overwrites the patch immediately).
 wait_for_idle() {
     local deadline=$(($(date +%s) + IDLE_TIMEOUT))
+    if [[ "$TOOL" == "jenkins" ]]; then
+        echo "[INFO] Jenkins has no in-cluster idle status; relying on the scheduled reconcile job."
+        return 0
+    fi
+
     echo "[INFO] Waiting for $TOOL to reach idle/Synced state..."
     while [[ $(date +%s) -lt $deadline ]]; do
         case "$TOOL" in
@@ -131,7 +136,8 @@ for i in $(seq 1 "$COUNT"); do
     DEADLINE=$(($(date +%s) + REVERT_TIMEOUT))
     while [[ $(date +%s) -lt $DEADLINE ]]; do
         GEN=$(kubectl get deployment backend -n "$NAMESPACE" -o jsonpath='{.metadata.generation}')
-        if [[ "$GEN" -gt $((PRE_GEN + 1)) ]]; then
+        REPLICAS=$(kubectl get deployment backend -n "$NAMESPACE" -o jsonpath='{.spec.replicas}')
+        if [[ "$GEN" -gt $((PRE_GEN + 1)) && "$REPLICAS" == "1" ]]; then
             REVERTED=true
             break
         fi
@@ -142,6 +148,7 @@ for i in $(seq 1 "$COUNT"); do
         case "$TOOL" in
             argocd) echo "[ERROR] Revert timeout after ${REVERT_TIMEOUT}s — Argo CD did not self-heal. Is selfHeal enabled?" >&2 ;;
             flux)   echo "[ERROR] Revert timeout after ${REVERT_TIMEOUT}s — Flux did not self-heal. Is prune/force enabled on the Kustomization?" >&2 ;;
+            jenkins) echo "[ERROR] Revert timeout after ${REVERT_TIMEOUT}s — Jenkins did not self-heal. Is the budget-tracker-reconcile schedule enabled?" >&2 ;;
         esac
         exit 1
     fi

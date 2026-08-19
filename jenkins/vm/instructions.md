@@ -77,7 +77,47 @@ pipeline {
 }
 ```
 
-**3d. Generate an API token**
+**3d. Create the scheduled reconcile pipeline**
+- Go to **New Item**, name it `budget-tracker-reconcile`, type: `Pipeline`
+- Paste the following into the Pipeline script box:
+
+```groovy
+pipeline {
+  agent any
+  options {
+    disableConcurrentBuilds()
+  }
+  triggers {
+    cron('* * * * *')
+  }
+  stages {
+    stage('Reconcile') {
+      steps {
+        withCredentials([file(credentialsId: 'aks-kubeconfig', variable: 'KUBECONFIG')]) {
+          sh '''
+            if [ -d /tmp/git-ops-lab-reconcile/.git ]; then
+              git -C /tmp/git-ops-lab-reconcile fetch origin main -q && git -C /tmp/git-ops-lab-reconcile reset --hard origin/main
+            else
+              git clone https://github.com/dkacza/git-ops-lab /tmp/git-ops-lab-reconcile
+            fi
+          '''
+          sh 'kubectl apply -f /tmp/git-ops-lab-reconcile/jenkins/manifests/'
+        }
+      }
+    }
+  }
+}
+```
+
+The scheduled reconcile job gives the Jenkins stack a periodic reconciliation
+loop for the self-healing scenario without mixing that concern into the
+CI-triggered deploy job. It is still a push-style Jenkins flow, so drift is
+corrected on the next scheduled build rather than continuously by an in-cluster
+controller. With the one-minute schedule above, expected reaction time is bounded
+by the remaining time until the next Jenkins tick plus the `kubectl apply`
+duration.
+
+**3e. Generate an API token**
 - Go to **Account → Security → API Token → Add new Token**
 - Name it `github-actions`, click Generate
 - Save the token to `jenkins/jenkins-api-token.txt`

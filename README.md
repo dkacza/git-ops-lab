@@ -34,8 +34,8 @@ All characteristics compared across the three stacks. Quantitative ones are back
 #### End-to-end deployment time *(quantitative)*
 Time from a git commit to both application pods passing their readiness probes. The CI phase is identical across all stacks (same GitHub Actions workflow); differences are attributable to the CD tool. Measured in two variants: CD latency (git-ops-lab commit → pods ready) and full E2E latency (app repo commit → pods ready).
 
-#### Self-healing latency *(quantitative — pull-based only)*
-Time for the CD tool to detect and revert a configuration drift introduced directly on the cluster. Pull-based tools (Argo CD, Flux) reconcile continuously against the git state. Jenkins has no equivalent — drift is not detected or corrected without a manual pipeline re-run.
+#### Self-healing latency *(quantitative)*
+Time for the CD tool to detect and revert a configuration drift introduced directly on the cluster. Pull-based tools (Argo CD, Flux) reconcile continuously against the git state. Jenkins is measured through a separate scheduled reconcile job that periodically runs `kubectl apply`, so its reaction time is bounded by the job interval.
 
 #### Resource consumption *(quantitative)*
 CPU and memory footprint of the CD tool sampled during idle and sync scenarios.
@@ -174,7 +174,7 @@ measurements/
     measure_e2e.sh          — argocd|flux|jenkins
     results/
   self-healing/             — replica drift → reaction + recovery time
-    measure_self_healing.sh — argocd|flux
+    measure_self_healing.sh — argocd|flux|jenkins
     results/
   failure-recovery/         — CD-tool pod delete (or Jenkins systemd stop) → back to Ready
     measure_failure_recovery.sh          — argocd|flux
@@ -224,12 +224,13 @@ For Jenkins setup refer to `jenkins/vm/instructions.md`
 - [x] Provisioning scripts (`provision-vm.sh`, `install-jenkins.sh`, `setup-jenkins.sh`) — create Azure VM, install Jenkins, wire AKS credentials
 - [x] Jenkins VM provisioned and verified on AKS
 - [x] `budget-tracker-deploy` pipeline job confirmed working end-to-end
+- [x] `budget-tracker-reconcile` scheduled pipeline documented for self-healing measurement
 - [x] GitHub Actions CI pipeline wired up (POST trigger after image tag commit)
 
 #### Measurement scripts
 - [x] E2E deployment — `e2e-deployment/measure_e2e.sh <argocd|flux|jenkins>`: app repo commit → pods ready (full pipeline latency)
 - [x] CD latency — `cd-deployment/measure_cd.sh <argocd|flux>` and `cd-deployment/measure_cd_jenkins.sh <vm-ip>`: git-ops-lab commit → pods ready
-- [x] Self-healing latency — `self-healing/measure_self_healing.sh <argocd|flux> -s <settle_seconds>`: replica drift → reaction and recovery time
+- [x] Self-healing latency — `self-healing/measure_self_healing.sh <argocd|flux|jenkins> -s <settle_seconds>`: replica drift → reaction and recovery time
 - [x] Failure recovery — `failure-recovery/measure_failure_recovery.sh <argocd|flux>` (pod delete → all-Ready) and `failure-recovery/measure_failure_recovery_jenkins.sh <vm-ip>` (systemd stop/start → HTTP 200)
 - [x] Failed deployment detection — `failed-detection/measure_failed_detection.sh <argocd|flux>`: bad image tag committed → pod in ImagePullBackOff
 - [x] Resource consumption — `resource-consumption/measure_resources_jenkins.sh <vm-ip>` (SSH + ps for the JVM); Argo CD / Flux equivalents are sampled via `kubectl top` on the in-cluster pods. `render_graph.py` plots CPU + memory from the resulting CSV.
