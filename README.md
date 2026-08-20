@@ -159,6 +159,9 @@ jenkins/
     backend-service.yaml
     frontend-deployment.yaml
     frontend-service.yaml
+  pipelines/              — Jenkinsfiles used by Pipeline script from SCM jobs
+    deploy.Jenkinsfile
+    reconcile.Jenkinsfile
   vm/
     provision-vm.sh             — creates Azure VM for Jenkins
     install-jenkins.sh          — installs Java 21, Jenkins LTS, kubectl on the VM (called by setup-jenkins.sh)
@@ -220,6 +223,7 @@ For ArgoCD setup refer to `argo-cd/aks/instructions.md`
 For Jenkins setup refer to `jenkins/vm/instructions.md`
 
 - [x] Config repo structure created (`jenkins/manifests/`)
+- [x] Jenkins pipeline definitions committed (`jenkins/pipelines/`)
 - [x] Kubernetes manifests prepared for GHCR images
 - [x] Provisioning scripts (`provision-vm.sh`, `install-jenkins.sh`, `setup-jenkins.sh`) — create Azure VM, install Jenkins, wire AKS credentials
 - [x] Jenkins VM provisioned and verified on AKS

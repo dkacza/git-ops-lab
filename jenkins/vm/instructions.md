@@ -45,69 +45,21 @@ Open `http://<vm-ip>:8080` in a browser.
 
 **3c. Create the deploy pipeline**
 - Go to **New Item**, name it `budget-tracker-deploy`, type: `Pipeline`
-- Paste the following into the Pipeline script box:
-
-```groovy
-pipeline {
-  agent any
-  stages {
-    stage('Deploy') {
-      steps {
-        withCredentials([file(credentialsId: 'aks-kubeconfig', variable: 'KUBECONFIG')]) {
-          sh '''
-            if [ -d /tmp/git-ops-lab/.git ]; then
-              git -C /tmp/git-ops-lab fetch origin main -q && git -C /tmp/git-ops-lab reset --hard origin/main
-            else
-              git clone https://github.com/dkacza/git-ops-lab /tmp/git-ops-lab
-            fi
-          '''
-          sh 'kubectl apply -f /tmp/git-ops-lab/jenkins/manifests/'
-        }
-      }
-    }
-    stage('Wait for rollout') {
-      steps {
-        withCredentials([file(credentialsId: 'aks-kubeconfig', variable: 'KUBECONFIG')]) {
-          sh 'kubectl rollout status deployment/backend -n budget-tracker --timeout=180s'
-          sh 'kubectl rollout status deployment/frontend -n budget-tracker --timeout=180s'
-        }
-      }
-    }
-  }
-}
-```
+- In **Pipeline → Definition**, select **Pipeline script from SCM**
+- SCM: `Git`
+- Repository URL: `https://github.com/dkacza/git-ops-lab`
+- Branch Specifier: `*/main`
+- Script Path: `jenkins/pipelines/deploy.Jenkinsfile`
+- Click Save
 
 **3d. Create the scheduled reconcile pipeline**
 - Go to **New Item**, name it `budget-tracker-reconcile`, type: `Pipeline`
-- Paste the following into the Pipeline script box:
-
-```groovy
-pipeline {
-  agent any
-  options {
-    disableConcurrentBuilds()
-  }
-  triggers {
-    cron('* * * * *')
-  }
-  stages {
-    stage('Reconcile') {
-      steps {
-        withCredentials([file(credentialsId: 'aks-kubeconfig', variable: 'KUBECONFIG')]) {
-          sh '''
-            if [ -d /tmp/git-ops-lab-reconcile/.git ]; then
-              git -C /tmp/git-ops-lab-reconcile fetch origin main -q && git -C /tmp/git-ops-lab-reconcile reset --hard origin/main
-            else
-              git clone https://github.com/dkacza/git-ops-lab /tmp/git-ops-lab-reconcile
-            fi
-          '''
-          sh 'kubectl apply -f /tmp/git-ops-lab-reconcile/jenkins/manifests/'
-        }
-      }
-    }
-  }
-}
-```
+- In **Pipeline → Definition**, select **Pipeline script from SCM**
+- SCM: `Git`
+- Repository URL: `https://github.com/dkacza/git-ops-lab`
+- Branch Specifier: `*/main`
+- Script Path: `jenkins/pipelines/reconcile.Jenkinsfile`
+- Click Save
 
 The scheduled reconcile job gives the Jenkins stack a periodic reconciliation
 loop for the self-healing scenario without mixing that concern into the
