@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: ghcr.io/dkacza/budget-tracker-frontend:sha-48d25c3
+          image: ghcr.io/dkacza/budget-tracker-frontend:sha-21e989f
           imagePullPolicy: Always
           ports:
             - containerPort: 80
